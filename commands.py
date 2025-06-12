@@ -1,12 +1,16 @@
 from discord.ext import commands
 from discord import app_commands
 import discord
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env
 
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.log_channel_id = 1111111111111111111  # Log channel ID, add yours here.
-        self.commands_channel_id = 1111111111111111111  # Commands channel ID, add yours here.
+        self.log_channel_id = int(os.getenv("LOG_CHANNEL_ID"))
+        self.commands_channel_id = int(os.getenv("COMMANDS_CHANNEL_ID"))
 
     @app_commands.command(name="sendanonymously", description="Send an anonymous message in the #Commands channel (Only staff will see your name)")
     @app_commands.describe(message="The message you want to send (up to 1900 characters)")
