@@ -3,6 +3,7 @@ from threading import Thread
 from discord.ext import commands
 import discord
 import os
+import asyncio
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -33,10 +34,18 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# ✅ Load your commands.py file as a Cog
+async def load_extensions():
+    await bot.load_extension("commands")  # assumes the file is named commands.py
+
+# ✅ Sync the slash commands when the bot is ready
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     print(f"✅ Logged in as {bot.user}")
+    print("✅ Slash commands synced.")
 
+# ✅ This is your anon DM fallback (optional)
 @bot.command()
 async def anon(ctx, *, message: str):
     if ctx.guild is not None:
@@ -53,4 +62,10 @@ async def anon(ctx, *, message: str):
 
     await ctx.send("✅ Your message has been sent anonymously.")
 
-bot.run(TOKEN)
+# ✅ Main async runner
+async def main():
+    await load_extensions()
+    await bot.start(TOKEN)
+
+# ✅ Kick off the bot
+asyncio.run(main())
