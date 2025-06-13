@@ -9,11 +9,7 @@ class CommandsCog(commands.Cog):
         self.log_channel_id = int(os.getenv("LOG_CHANNEL_ID"))
         self.commands_channel_id = int(os.getenv("COMMANDS_CHANNEL_ID"))
 
-    @app_commands.command(
-        name="sendanonymously",
-        description="Send an anonymous message in the #Commands channel (only staff will see your name)"
-    )
-    @app_commands.describe(message="The message you want to send (up to 1900 characters)")
+    # Define the actual app command
     async def sendmsg(self, interaction: discord.Interaction, message: str):
         if len(message) > 1900:
             await interaction.response.send_message("Your message exceeds the 1900 character limit.", ephemeral=True)
@@ -45,5 +41,11 @@ class CommandsCog(commands.Cog):
                 ephemeral=True
             )
 
-async def setup(bot):
-    await bot.add_cog(CommandsCog(bot))
+async def setup(bot: commands.Bot):
+    cog = CommandsCog(bot)
+    bot.tree.add_command(app_commands.Command(
+        name="sendanonymously",
+        description="Send an anonymous message in the #Commands channel (only staff will see your name)",
+        callback=cog.sendmsg
+    ))
+    await bot.add_cog(cog)
