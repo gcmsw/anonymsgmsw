@@ -22,28 +22,24 @@ class CommandsCog(commands.Cog):
         log_channel = self.bot.get_channel(self.log_channel_id)
         commands_channel = self.bot.get_channel(self.commands_channel_id)
 
-        log_message_content = (
-            f"Author: {interaction.user}\n"
-            f"Author ID: {interaction.user.id}\n"
-            f"Content: {message}"
-        )
-        commands_message_content = (
-            f"Author: Anonymous\n"
-            f"Content: {message}"
-        )
+        log_msg = f"Author: {interaction.user}\nAuthor ID: {interaction.user.id}\nContent: {message}"
+        anon_msg = f"Author: Anonymous\nContent: {message}"
 
         if log_channel:
-            await log_channel.send(log_message_content)
+            await log_channel.send(log_msg)
         if commands_channel:
-            await commands_channel.send(commands_message_content)
+            await commands_channel.send(anon_msg)
 
         if log_channel or commands_channel:
             await interaction.response.send_message("✅ Your message has been sent.", ephemeral=True)
         else:
             await interaction.response.send_message(
-                "⚠️ One or more of the required channels was not found. Please reach out to Staff or Developers.",
+                "⚠️ One or more of the required channels was not found.",
                 ephemeral=True
             )
+
+    async def cog_load(self):
+        self.bot.tree.add_command(self.sendmsg)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CommandsCog(bot))
