@@ -8,13 +8,10 @@ from keep_alive import keep_alive
 keep_alive()
 
 # ... your existing bot code
-bot.run(os.environ["DISCORD_TOKEN"])
-
-
 bot = commands.Bot(command_prefix="?", intents=discord.Intents.all())
 initial_extensions = ["commands"]
 bot.remove_command("help")
-
+bot.run(os.environ["DISCORD_TOKEN"])
 
 @bot.event
 async def on_ready():
