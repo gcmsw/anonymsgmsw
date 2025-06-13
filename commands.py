@@ -1,22 +1,14 @@
-import os
-import discord
 from discord.ext import commands
 from discord import app_commands
-
-# Pull env vars from Render
-LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
-COMMANDS_CHANNEL_ID = int(os.getenv("COMMANDS_CHANNEL_ID"))
+import discord
 
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.log_channel_id = LOG_CHANNEL_ID
-        self.commands_channel_id = COMMANDS_CHANNEL_ID
+        self.log_channel_id = 1382563380367331429  # Log channel ID, add yours here.
+        self.commands_channel_id = 1382563343717502996  # Commands channel ID, add yours here.
 
-    @app_commands.command(
-        name="sendanonymously",
-        description="Send an anonymous message in the Commands channel (Only staff will see your name)"
-    )
+    @app_commands.command(name="sendanonymously", description="Send an anonymous message in the #Commands channel (Only staff will see your name)")
     @app_commands.describe(message="The message you want to send (up to 1900 characters)")
     async def sendmsg(self, interaction: discord.Interaction, message: str):
         if len(message) > 1900:
@@ -25,7 +17,7 @@ class CommandsCog(commands.Cog):
 
         log_channel = self.bot.get_channel(self.log_channel_id)
         commands_channel = self.bot.get_channel(self.commands_channel_id)
-
+        
         log_message_content = (
             f"Author: {interaction.user}\n"
             f"Author ID: {interaction.user.id}\n"
@@ -35,16 +27,16 @@ class CommandsCog(commands.Cog):
             f"Author: Anonymous\n"
             f"Content: {message}"
         )
-
+        
         if log_channel:
             await log_channel.send(log_message_content)
         if commands_channel:
             await commands_channel.send(commands_message_content)
-
+        
         if log_channel or commands_channel:
             await interaction.response.send_message(content="Your message has been sent.", ephemeral=True)
         else:
-            await interaction.response.send_message(content="Channels not found. Please contact staff.", ephemeral=True)
+            await interaction.response.send_message(content="One or more of the required channels was not found. Please reach out to Staff or Developers.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
