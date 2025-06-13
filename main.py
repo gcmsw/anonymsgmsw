@@ -127,4 +127,6 @@ async def shutdown(interaction: discord.Interaction):
         await interaction.response.send_message(f"Something went wrong: ```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
 
 
-bot.run("TOKEN")
+import os
+bot.run(os.environ["DISCORD_TOKEN"])
+
