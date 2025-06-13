@@ -30,7 +30,7 @@ intents.messages = True
 intents.message_content = True
 intents.dm_messages = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="/", intents=intents)
 
 # Load commands.py as a cog
 async def load_extensions():
@@ -44,7 +44,7 @@ async def on_ready():
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash command(s)")
     except Exception as e:
-        print(f"❌ Failed to sync commands: {e}")
+        print(f"❌ Failed to sync commands:{e}")
 
 # Main async entrypoint
 async def main():
