@@ -41,9 +41,12 @@ async def load_extensions():
 # ✅ Sync the slash commands when the bot is ready
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
     print(f"✅ Logged in as {bot.user}")
-    print("✅ Slash commands synced.")
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"❌ Failed to sync commands: {e}")
 
 # ✅ This is your anon DM fallback (optional)
 @bot.command()
