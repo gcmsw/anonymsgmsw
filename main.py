@@ -1,6 +1,15 @@
 from discord.ext import commands
 from discord import app_commands
 import discord
+import os
+from keep_alive import keep_alive
+
+# Keep-alive web server for Render
+keep_alive()
+
+# ... your existing bot code
+bot.run(os.environ["DISCORD_TOKEN"])
+
 
 bot = commands.Bot(command_prefix="?", intents=discord.Intents.all())
 initial_extensions = ["commands"]
