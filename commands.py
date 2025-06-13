@@ -5,8 +5,11 @@ import discord
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.log_channel_id = 1382563380367331429  # Log channel ID, add yours here.
-        self.commands_channel_id = 1382563343717502996  # Commands channel ID, add yours here.
+        try:
+            self.log_channel_id = int(os.environ["LOG_CHANNEL_ID"])  # Logs go here
+            self.commands_channel_id = int(os.environ["COMMANDS_CHANNEL_ID"])  # Anonymous messages go here
+        except KeyError as e:
+            raise RuntimeError(f"Missing required environment variable: {e}")
 
     @app_commands.command(name="sendanonymously", description="Send an anonymous message in the #Commands channel (Only staff will see your name)")
     @app_commands.describe(message="The message you want to send (up to 1900 characters)")
