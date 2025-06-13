@@ -110,23 +110,26 @@ async def shutdown(interaction: discord.Interaction):
 # ✅ Ready event must come BEFORE bot.run()
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="you"), status=discord.Status.do_not_disturb)
-    print("Bot is online!")
+    await bot.change_presence(
+        activity=discord.Activity(type=discord.ActivityType.listening, name="you"),
+        status=discord.Status.do_not_disturb
+    )
+    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
     # Load extensions
     for extension in initial_extensions:
         try:
             await bot.load_extension(extension)
-            print(f"Loaded extension: {extension}")
+            print(f"✅ Loaded extension: {extension}")
         except Exception as e:
-            print(f"Failed to load extension {extension}: {e}")
+            print(f"❌ Failed to load extension {extension}: {e}")
 
     # Sync slash commands
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} slash command(s).")
+        print(f"✅ Synced {len(synced)} slash command(s).")
     except Exception as e:
-        print(f"Slash command sync error: {e}")
+        print(f"❌ Slash command sync failed: {e}")
 
 # ✅ Only now start the bot
 bot.run(os.environ["DISCORD_TOKEN"])
