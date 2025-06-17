@@ -26,9 +26,7 @@ class CommandsCog(commands.Cog):
             f"Author ID: {interaction.user.id}\n"
             f"Content: {message}"
         )
-        commands_message_content = (
-            f"Author: Anonymous\n"
-            f"Content: {message}"
+        commands_message_content = message
         )
 
         if log_channel:
