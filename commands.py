@@ -7,7 +7,7 @@ class CommandsCog(commands.Cog):
         self.bot = bot
         self.log_channel_id = 1382563380367331429  # Log channel ID
         self.commands_channel_id = 1382563343717502996  # Commands channel ID
-
+    
     @app_commands.command(
         name="sendanonymously",
         description="Send an anonymous message in the #Commands channel (Only staff will see your name)"
@@ -17,6 +17,7 @@ class CommandsCog(commands.Cog):
         if len(message) > 1900:
             await interaction.response.send_message("Your message exceeds the 1900 character limit.", ephemeral=True)
             return
+        print(f"commands_channel: {commands_channel} — type: {type(commands_channel)}")
 
         log_channel = self.bot.get_channel(self.log_channel_id)
         commands_channel = self.bot.get_channel(self.commands_channel_id)
