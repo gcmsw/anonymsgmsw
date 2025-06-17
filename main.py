@@ -44,4 +44,52 @@ async def load(interaction: discord.Interaction, extension: str):
 @is_staff()
 async def unload(interaction: discord.Interaction, extension: str):
     try:
-        awai
+        await bot.unload_extension(extension.lower())
+        await interaction.response.send_message(f"{extension.lower()} unloaded.", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
+
+@bot.tree.command(name="reload", description="Reloads the chosen extension.")
+@app_commands.describe(extension="Current extensions: commands")
+@is_staff()
+async def reload(interaction: discord.Interaction, extension: str):
+    try:
+        await bot.reload_extension(extension.lower())
+        await interaction.response.send_message(f"{extension.lower()} reloaded.", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
+
+@bot.tree.command(name="ping", description="Get the bot's current latency.")
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Latency: {round(bot.latency * 1000, 1)}ms", ephemeral=True)
+
+@bot.tree.command(name="shutdown", description="Shuts the bot down.")
+@is_staff()
+async def shutdown(interaction: discord.Interaction):
+    await interaction.response.send_message("Shutting down now.")
+    await bot.close()
+
+# On ready
+@bot.event
+async def on_ready():
+    await bot.change_presence(
+        activity=discord.Activity(type=discord.ActivityType.listening, name="you"),
+        status=discord.Status.do_not_disturb
+    )
+    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+
+    for extension in initial_extensions:
+        try:
+            await bot.load_extension(extension)
+            print(f"✅ Loaded extension: {extension}")
+        except Exception as e:
+            print(f"❌ Failed to load extension {extension}: {e}")
+
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} slash command(s).")
+    except Exception as e:
+        print(f"❌ Slash command sync failed: {e}")
+
+# Run bot
+bot.run(os.environ["DISCORD_TOKEN"])
