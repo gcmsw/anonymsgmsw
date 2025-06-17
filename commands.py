@@ -27,7 +27,6 @@ class CommandsCog(commands.Cog):
             f"Content: {message}"
         )
         commands_message_content = message
-        )
 
         if log_channel:
             await log_channel.send(log_message_content)
