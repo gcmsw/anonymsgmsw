@@ -26,7 +26,10 @@ class CommandsCog(commands.Cog):
             f"Author ID: {interaction.user.id}\n"
             f"Content: {message}"
         )
-        commands_message_content = message
+        commands_message_content = (
+            f"Author: Anonymous\n"
+            f"Content: {message}"
+        )
 
         if log_channel:
             await log_channel.send(log_message_content)
