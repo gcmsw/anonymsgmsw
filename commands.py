@@ -3,61 +3,90 @@ from discord import app_commands
 import discord
 import os
 
+# Temporary in-memory store to track OPs by thread ID
+original_posters = {}
+
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        try:
-            self.log_channel_id = int(os.environ["LOG_CHANNEL_ID"])  # Staff-only log
-            self.commands_channel_id = int(os.environ["COMMANDS_CHANNEL_ID"])  # Anonymous message destination
-            self.forum_channel_id = int(os.environ["FORUM_CHANNEL_ID"])  # Forum channel for anonymous replies
-        except KeyError as e:
-            raise RuntimeError(f"Missing required environment variable: {e}")
+        self.log_channel_id = int(os.environ.get("LOG_CHANNEL_ID"))
+        self.commands_channel_id = int(os.environ.get("COMMANDS_CHANNEL_ID"))
+        self.review_forum_id = int(os.environ.get("REVIEW_FORUM_CHANNEL_ID"))
 
-    @app_commands.command(name="sendanonymously", description="Send an anonymous message (Only staff will see your name)")
-    @app_commands.describe(site="The site name (will be used as the thread title)", message="Your anonymous review message")
-    async def sendanonymously(self, interaction: discord.Interaction, site: str, message: str):
-        if len(message) > 1900:
-            await interaction.response.send_message("Your message exceeds the 1900 character limit.", ephemeral=True)
+    # --------------- Autocomplete for Threads ---------------
+    async def autocomplete_thread_titles(self, interaction: discord.Interaction, current: str):
+        forum = self.bot.get_channel(self.review_forum_id)
+        if not forum:
+            return []
+        return [app_commands.Choice(name=thread.name[:100], value=str(thread.id))
+                for thread in forum.threads if current.lower() in thread.name.lower()][:25]
+
+    # --------------- /sendanonymously Command ---------------
+    @app_commands.command(name="sendanonymously", description="Post an anonymous site review")
+    @app_commands.describe(site_name="Field site name", message="Your anonymous review", rating="1 to 5 star rating")
+    async def sendmsg(self, interaction: discord.Interaction, site_name: str, message: str, rating: app_commands.Range[int, 1, 5]):
+        forum = self.bot.get_channel(self.review_forum_id)
+        if not forum:
+            await interaction.response.send_message("Forum channel not found.", ephemeral=True)
             return
+
+        stars = "⭐" * rating
+        thread = await forum.create_thread(name=site_name, content=f"{stars} - {message}")
+
+        original_posters[thread.id] = interaction.user.id
 
         log_channel = self.bot.get_channel(self.log_channel_id)
-        forum_channel = self.bot.get_channel(self.forum_channel_id)
-
-        if not forum_channel or not isinstance(forum_channel, discord.ForumChannel):
-            await interaction.response.send_message("Forum channel not found or incorrect type.", ephemeral=True)
-            return
-
-        thread = await forum_channel.create_thread(name=site, content=message)
-
         if log_channel:
             await log_channel.send(
-                f"[ANONYMOUS POST]\nAuthor: {interaction.user} ({interaction.user.id})\nSite: {site}\nContent: {message}"
+                f"[OP Review]\nAuthor: {interaction.user}\nSite: {site_name}\nRating: {rating}\nContent: {message}"
             )
 
-        await interaction.response.send_message("✅ Your anonymous post has been submitted.", ephemeral=True)
+        await interaction.response.send_message("Your review was posted anonymously.", ephemeral=True)
 
-    @app_commands.command(name="replyanon", description="Reply anonymously to an existing forum thread.")
-    @app_commands.describe(thread_id="The ID of the forum thread", message="The reply you want to send")
-    async def replyanon(self, interaction: discord.Interaction, thread_id: str, message: str):
-        if len(message) > 1900:
-            await interaction.response.send_message("Your message exceeds the 1900 character limit.", ephemeral=True)
-            return
+    # --------------- /replyanon Command ---------------
+    @app_commands.command(name="replyanon", description="Post an anonymous reply in a forum thread")
+    @app_commands.describe(thread_id="Select the thread", reply_type="Choose reply type", message="Your reply")
+    @app_commands.choices(reply_type=[
+        app_commands.Choice(name="Question", value="question"),
+        app_commands.Choice(name="Answer", value="answer"),
+        app_commands.Choice(name="Add Review", value="review")
+    ])
+    async def replyanon(self, interaction: discord.Interaction, 
+                        thread_id: app_commands.Transform[str, autocomplete_thread_titles], 
+                        reply_type: app_commands.Choice[str], 
+                        message: str,
+                        rating: app_commands.Range[int, 1, 5] = None):
 
         thread = self.bot.get_channel(int(thread_id))
-        log_channel = self.bot.get_channel(self.log_channel_id)
-
-        if not isinstance(thread, discord.Thread):
-            await interaction.response.send_message("❌ Invalid thread ID. Please make sure it's from the forum.", ephemeral=True)
+        if not thread:
+            await interaction.response.send_message("Thread not found.", ephemeral=True)
             return
 
-        await thread.send(message)
+        emoji = ""
+        content = message
 
+        if reply_type.value == "question":
+            emoji = "↩️"  # ↩️
+            content = f"{emoji} - {message}"
+        elif reply_type.value == "answer":
+            emoji = "💬"  # 💬
+            content = f"{emoji} - {message}"
+        elif reply_type.value == "review":
+            if not rating:
+                await interaction.response.send_message("Please provide a rating (1-5 stars) when adding a review.", ephemeral=True)
+                return
+            stars = "⭐" * rating
+            content = f"{stars} - {message}"
+
+        await thread.send(content)
+
+        log_channel = self.bot.get_channel(self.log_channel_id)
         if log_channel:
             await log_channel.send(
-                f"[ANONYMOUS REPLY]\nAuthor: {interaction.user} ({interaction.user.id})\nThread ID: {thread_id}\nMessage: {message}"
+                f"[Reply - {reply_type.name}]\nAuthor: {interaction.user}\nThread: {thread.name}\nContent: {message}"
             )
 
-        await interaction.response.send_message("✅ Your anonymous reply has been sent.", ephemeral=True)
+        await interaction.response.send_message("Your anonymous reply has been posted.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
