@@ -55,7 +55,7 @@ class CommandsCog(commands.Cog):
 
         emoji = {
             "question": "↩️",  # ↩️
-            "answer": "\U0001F4AC",   # 💬
+            "answer": "💬",   # 💬
             "review": "⭐" * rating if rating else "⭐"
         }.get(reply_type.lower(), "")
 
