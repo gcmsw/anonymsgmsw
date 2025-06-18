@@ -12,12 +12,3 @@
 - **Sensitive Topics**: Members can discuss delicate matters privately and discreetly.
 
 
-### Admin Commands (for server staff)
-- `/load [extension]` — Loads the chosen extension.
-- `/unload [extension]` — Unloads the chosen extension.
-- `/reload [extension]` — Reloads the chosen extension.
-- `/ping` — Checks the bot's current latency.
-- `/send [message] [channel_id]` — Sends a message in the specified channel.
-- `/sendhere [message]` — Sends a message in the current channel.
-- `/dm [user] [message]` — Sends a DM to the chosen user.
-- `/shutdown` — Shuts down the bot.
