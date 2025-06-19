@@ -1,26 +1,42 @@
 import discord
 from discord.ext import commands
-from keep_alive import keep_alive
+from flask import Flask
+import threading
+import os
+import asyncio
 
 intents = discord.Intents.default()
 intents.messages = True
 intents.guilds = True
-intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# Load extension
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("------")
+    print(f"Bot logged in as {bot.user}")
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} commands.")
     except Exception as e:
-        print(f"Sync error: {e}")
+        print(f"Failed to sync commands: {e}")
 
 async def main():
-    await bot.load_extension("commands")
+    async with bot:
+        await bot.load_extension("commands")
+        await bot.start(os.getenv("DISCORD_TOKEN"))
 
-keep_alive()
-bot.run("YOUR_BOT_TOKEN")
+# Flask keep-alive
+app = Flask("")
+
+@app.route("/")
+def home():
+    return "I'm alive"
+
+def run():
+    app.run(host="0.0.0.0", port=8080)
+
+threading.Thread(target=run).start()
+
+# Run bot
+asyncio.run(main())
