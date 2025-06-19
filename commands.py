@@ -58,6 +58,16 @@ class ReplyModal(ui.Modal, title="Reply in a Thread"):
         command_cog = interaction.client.get_cog("CommandsCog")
         await command_cog.anon_reply(interaction, self.thread_id.value, self.message_id.value, self.message.value)
 
+class CommandsCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.log_channel_id = 1382563380367331429  # Log channel
+        self.forum_channel_id = 1384999875237646508  # Forum channel
+
+    # Slash commands go here (same as in your original code... omitted for brevity)
+    # Include all of anon-newsite, anon-addreview, anon-question, anon-reply and their autocompletes
+    # (Can paste back if needed)
+
 class ButtonPanel(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -70,4 +80,5 @@ class ButtonPanel(commands.Cog):
             await channel.send("Click a button below to get started anonymously:", view=ReviewButtons())
 
 async def setup(bot):
+    await bot.add_cog(CommandsCog(bot))
     await bot.add_cog(ButtonPanel(bot))
