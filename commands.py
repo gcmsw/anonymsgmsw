@@ -25,7 +25,6 @@ class CommandsCog(commands.Cog):
         stars = "⭐" * rating
         post_content = f"{stars} - {message}"
 
-        # Check for duplicate thread
         for thread in forum_channel.threads:
             if thread.name.strip().lower() == site_name.strip().lower():
                 sent_msg = await thread.send(post_content)
@@ -109,6 +108,23 @@ class CommandsCog(commands.Cog):
             for thread in forum_channel.threads
             if current.lower() in thread.name.lower()
         ][:25]
+
+    @anon_reply.autocomplete("message_id")
+    async def message_id_autocomplete(self, interaction: discord.Interaction, current: str):
+        thread_id = interaction.namespace.thread_id
+        try:
+            thread = self.bot.get_channel(int(thread_id))
+            if isinstance(thread, discord.Thread):
+                messages = [
+                    message async for message in thread.history(limit=50)
+                    if current in str(message.id) or current.lower() in message.content.lower()
+                ]
+                return [
+                    app_commands.Choice(name=msg.content[:80], value=str(msg.id))
+                    for msg in messages[:25]
+                ]
+        except Exception:
+            return []
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
