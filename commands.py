@@ -9,6 +9,9 @@ class CommandsCog(commands.Cog):
         self.log_channel_id = 1382563380367331429  # Log channel
         self.forum_channel_id = 1384999875237646508  # Forum channel
 
+    def censor_user(self, user: discord.User) -> str:
+        return f"||{user.name}#{user.discriminator}||"
+
     @app_commands.command(
         name="anon-newsite",
         description="Submit a new anonymous review for a site (includes 1-5 star rating)"
@@ -28,8 +31,9 @@ class CommandsCog(commands.Cog):
         for thread in forum_channel.threads:
             if thread.name.strip().lower() == site_name.strip().lower():
                 sent_msg = await thread.send(post_content)
+                censored_user = self.censor_user(interaction.user)
                 await log_channel.send(
-                    f"[ANON REDIRECTED REVIEW]\nSite: {site_name}\nRating: {rating}\nAuthor: {interaction.user}\nMessage: {message}\nThread: {sent_msg.jump_url}"
+                    f"[ANON REDIRECTED REVIEW]\nSite: {site_name}\nRating: {rating}\nAuthor: {censored_user}\nMessage: {message}\nThread: {sent_msg.jump_url}"
                 )
                 try:
                     await interaction.response.send_message(
@@ -41,8 +45,9 @@ class CommandsCog(commands.Cog):
                 return
 
         thread = await forum_channel.create_thread(name=site_name, content=post_content)
+        censored_user = self.censor_user(interaction.user)
         await log_channel.send(
-            f"[ANON NEW THREAD]\nSite: {site_name}\nRating: {rating}\nAuthor: {interaction.user}\nMessage: {message}\nThread: {thread.jump_url}"
+            f"[ANON NEW THREAD]\nSite: {site_name}\nRating: {rating}\nAuthor: {censored_user}\nMessage: {message}\nThread: {thread.jump_url}"
         )
         await interaction.response.send_message("Your anonymous review has been submitted.", ephemeral=True)
 
@@ -55,8 +60,9 @@ class CommandsCog(commands.Cog):
         if thread and isinstance(thread, discord.Thread):
             stars = "⭐" * rating
             sent_msg = await thread.send(f"{stars} - {message}")
+            censored_user = self.censor_user(interaction.user)
             await log_channel.send(
-                f"[ANON ADD REVIEW]\nThread: {thread.name}\nRating: {rating}\nAuthor: {interaction.user}\nMessage: {message}\nMessage: {sent_msg.jump_url}"
+                f"[ANON ADD REVIEW]\nThread: {thread.name}\nRating: {rating}\nAuthor: {censored_user}\nMessage: {message}\nMessage: {sent_msg.jump_url}"
             )
             await interaction.response.send_message("Your anonymous review was posted.", ephemeral=True)
         else:
@@ -70,8 +76,9 @@ class CommandsCog(commands.Cog):
 
         if thread and isinstance(thread, discord.Thread):
             sent_msg = await thread.send(f"❓ - {message}")
+            censored_user = self.censor_user(interaction.user)
             await log_channel.send(
-                f"[ANON QUESTION]\nThread: {thread.name}\nAuthor: {interaction.user}\nMessage: {message}\nMessage: {sent_msg.jump_url}"
+                f"[ANON QUESTION]\nThread: {thread.name}\nAuthor: {censored_user}\nMessage: {message}\nMessage: {sent_msg.jump_url}"
             )
             await interaction.response.send_message("Your anonymous question was posted.", ephemeral=True)
         else:
@@ -87,8 +94,9 @@ class CommandsCog(commands.Cog):
             try:
                 reference_msg = await thread.fetch_message(int(message_id))
                 sent_msg = await thread.send(f"↩️ - {message}", reference=reference_msg)
+                censored_user = self.censor_user(interaction.user)
                 await log_channel.send(
-                    f"[ANON REPLY]\nThread: {thread.name}\nAuthor: {interaction.user}\nMessage: {message}\nMessage: {sent_msg.jump_url}"
+                    f"[ANON REPLY]\nThread: {thread.name}\nAuthor: {censored_user}\nMessage: {message}\nMessage: {sent_msg.jump_url}"
                 )
                 await interaction.response.send_message("Your anonymous reply was posted.", ephemeral=True)
             except discord.NotFound:
@@ -108,23 +116,6 @@ class CommandsCog(commands.Cog):
             for thread in forum_channel.threads
             if current.lower() in thread.name.lower()
         ][:25]
-
-    @anon_reply.autocomplete("message_id")
-    async def message_id_autocomplete(self, interaction: discord.Interaction, current: str):
-        thread_id = interaction.namespace.thread_id
-        try:
-            thread = self.bot.get_channel(int(thread_id))
-            if isinstance(thread, discord.Thread):
-                messages = [
-                    message async for message in thread.history(limit=50)
-                    if current in str(message.id) or current.lower() in message.content.lower()
-                ]
-                return [
-                    app_commands.Choice(name=msg.content[:80], value=str(msg.id))
-                    for msg in messages[:25]
-                ]
-        except Exception:
-            return []
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
