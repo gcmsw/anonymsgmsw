@@ -11,13 +11,13 @@ keep_alive()
 bot = commands.Bot(command_prefix="?", intents=discord.Intents.all())
 bot.remove_command("help")  # Optional: remove default help
 
-initial_extensions = ["commands"]  # Extension file(s)
+initial_extensions = ["commands", "button_panel"]  # Include both cogs
 
 # Staff permission check
 def is_staff():
     async def predicate(interaction: discord.Interaction) -> bool:
         try:
-            staff_role = discord.utils.get(interaction.guild.roles, name="staff")
+            staff_role = discord.utils.get(interaction.guild.roles, name="Admin")
             if staff_role in interaction.user.roles:
                 return True
             else:
@@ -30,7 +30,7 @@ def is_staff():
 
 # Management commands
 @bot.tree.command(name="load", description="Loads the chosen extension.")
-@app_commands.describe(extension="Current extensions: commands")
+@app_commands.describe(extension="Current extensions: commands, button_panel")
 @is_staff()
 async def load(interaction: discord.Interaction, extension: str):
     try:
@@ -40,7 +40,7 @@ async def load(interaction: discord.Interaction, extension: str):
         await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
 
 @bot.tree.command(name="unload", description="Unloads the chosen extension.")
-@app_commands.describe(extension="Current extensions: commands")
+@app_commands.describe(extension="Current extensions: commands, button_panel")
 @is_staff()
 async def unload(interaction: discord.Interaction, extension: str):
     try:
@@ -50,7 +50,7 @@ async def unload(interaction: discord.Interaction, extension: str):
         await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
 
 @bot.tree.command(name="reload", description="Reloads the chosen extension.")
-@app_commands.describe(extension="Current extensions: commands")
+@app_commands.describe(extension="Current extensions: commands, button_panel")
 @is_staff()
 async def reload(interaction: discord.Interaction, extension: str):
     try:
