@@ -1,13 +1,14 @@
 [tool.poetry]
 name = "anonymsg"
 version = "0.1.0"
-description = "Anonymous message bot for Discord"
+description = "Discord bot for anonymous messages, reviews, and questions"
 authors = ["Your Name <you@example.com>"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-discord = "^2.3.2"
-flask = "^3.0.3"
+discord-py = "^2.3.2"
+flask = "^3.1.1"
 
 [build-system]
 requires = ["poetry-core"]
