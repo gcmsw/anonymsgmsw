@@ -61,12 +61,42 @@ class ReplyModal(ui.Modal, title="Reply in a Thread"):
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.log_channel_id = 1382563380367331429  # Log channel
-        self.forum_channel_id = 1384999875237646508  # Forum channel
+        self.log_channel_id = 1382563380367331429
+        self.forum_channel_id = 1384999875237646508
 
-    # Slash commands go here (same as in your original code... omitted for brevity)
-    # Include all of anon-newsite, anon-addreview, anon-question, anon-reply and their autocompletes
-    # (Can paste back if needed)
+    @app_commands.command(name="anon-newsite", description="Post an anonymous review in a new thread.")
+    async def newsite(self, interaction: Interaction, site_name: str, message: str, rating: int):
+        forum = interaction.guild.get_channel(self.forum_channel_id)
+        thread = await forum.create_thread(name=f"{site_name} ⭐{rating}", content=message)
+        await interaction.response.send_message("✅ Your anonymous review has been posted.", ephemeral=True)
+        log = interaction.guild.get_channel(self.log_channel_id)
+        await log.send(f"🆕 Anonymous review posted for `{site_name}` with ⭐{rating}:\n{message}\nThread: {thread.jump_url}")
+
+    @app_commands.command(name="anon-addreview", description="Add an anonymous review to an existing thread.")
+    @app_commands.describe(thread_id="The ID of the thread", message="Your review", rating="1–5 stars")
+    async def addreview(self, interaction: Interaction, thread_id: str, message: str, rating: int):
+        thread = interaction.guild.get_thread(int(thread_id))
+        await thread.send(f"⭐{rating} Anonymous Review:\n{message}")
+        await interaction.response.send_message("✅ Your review was added anonymously.", ephemeral=True)
+        log = interaction.guild.get_channel(self.log_channel_id)
+        await log.send(f"⭐ Anonymous follow-up review added:\n{message}\nThread: {thread.jump_url}")
+
+    @app_commands.command(name="anon-question", description="Ask an anonymous question in a thread.")
+    async def anon_question(self, interaction: Interaction, thread_id: str, message: str):
+        thread = interaction.guild.get_thread(int(thread_id))
+        await thread.send(f"❓ Anonymous Question:\n{message}")
+        await interaction.response.send_message("✅ Your question was posted anonymously.", ephemeral=True)
+        log = interaction.guild.get_channel(self.log_channel_id)
+        await log.send(f"❓ Anonymous question added:\n{message}\nThread: {thread.jump_url}")
+
+    @app_commands.command(name="anon-reply", description="Post an anonymous reply to a specific message.")
+    async def anon_reply(self, interaction: Interaction, thread_id: str, message_id: str, message: str):
+        thread = interaction.guild.get_thread(int(thread_id))
+        original = await thread.fetch_message(int(message_id))
+        await original.reply(f"↩️ Anonymous Reply:\n{message}")
+        await interaction.response.send_message("✅ Your reply was posted anonymously.", ephemeral=True)
+        log = interaction.guild.get_channel(self.log_channel_id)
+        await log.send(f"↩️ Anonymous reply:\n{message}\nThread: {thread.jump_url}")
 
 class ButtonPanel(commands.Cog):
     def __init__(self, bot):
@@ -78,7 +108,11 @@ class ButtonPanel(commands.Cog):
         channel = self.bot.get_channel(channel_id)
         if channel:
             await channel.send("Click a button below to get started anonymously:", view=ReviewButtons())
+            print("✅ Button view sent to SUBMIT_CHANNEL_ID")
+        else:
+            print("❌ SUBMIT_CHANNEL_ID not found or bot can't access it")
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
     await bot.add_cog(ButtonPanel(bot))
+    print("✅ All cogs loaded")
