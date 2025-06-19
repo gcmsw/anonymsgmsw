@@ -89,9 +89,22 @@ async def on_ready():
         except Exception as e:
             print(f"❌ Failed to load extension {ext}: {e}")
 
-    # Register persistent button view
+    # Register persistent views
     from commands import ReviewButtons
     bot.add_view(ReviewButtons())
+    print("✅ Registered persistent ReviewButtons view")
+
+    # Send button panel after view registration
+    try:
+        channel_id = int(os.environ.get("SUBMIT_CHANNEL_ID"))
+        channel = bot.get_channel(channel_id)
+        if channel:
+            await channel.send("Click a button below to get started anonymously:", view=ReviewButtons())
+            print("✅ Sent button panel to SUBMIT_CHANNEL_ID")
+        else:
+            print("❌ Could not find SUBMIT_CHANNEL_ID")
+    except Exception as e:
+        print(f"❌ Failed to send button panel: {e}")
 
     try:
         synced = await bot.tree.sync()
