@@ -3,16 +3,23 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from keep_alive import keep_alive
-from commands import ReviewButtons  # Import the button view
+from commands import ReviewButtons
 
+# Keep-alive server for Render
 keep_alive()
 
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="?", intents=intents)
+# Define bot
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.members = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
 bot.remove_command("help")
 
 initial_extensions = ["commands"]
 
+# Staff permission check
 def is_staff():
     async def predicate(interaction: discord.Interaction) -> bool:
         try:
@@ -27,8 +34,9 @@ def is_staff():
             return False
     return app_commands.check(predicate)
 
-@bot.tree.command(name="load", description="Loads the chosen extension.")
-@app_commands.describe(extension="Current extensions: commands")
+# Bot commands
+@bot.tree.command(name="load", description="Loads an extension.")
+@app_commands.describe(extension="Extension name (e.g. commands)")
 @is_staff()
 async def load(interaction: discord.Interaction, extension: str):
     try:
@@ -37,8 +45,8 @@ async def load(interaction: discord.Interaction, extension: str):
     except Exception as e:
         await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
 
-@bot.tree.command(name="unload", description="Unloads the chosen extension.")
-@app_commands.describe(extension="Current extensions: commands")
+@bot.tree.command(name="unload", description="Unloads an extension.")
+@app_commands.describe(extension="Extension name (e.g. commands)")
 @is_staff()
 async def unload(interaction: discord.Interaction, extension: str):
     try:
@@ -47,8 +55,8 @@ async def unload(interaction: discord.Interaction, extension: str):
     except Exception as e:
         await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
 
-@bot.tree.command(name="reload", description="Reloads the chosen extension.")
-@app_commands.describe(extension="Current extensions: commands")
+@bot.tree.command(name="reload", description="Reloads an extension.")
+@app_commands.describe(extension="Extension name (e.g. commands)")
 @is_staff()
 async def reload(interaction: discord.Interaction, extension: str):
     try:
@@ -57,11 +65,11 @@ async def reload(interaction: discord.Interaction, extension: str):
     except Exception as e:
         await interaction.response.send_message(f"```py\n{type(e).__name__}: {str(e)}\n```", ephemeral=True)
 
-@bot.tree.command(name="ping", description="Get the bot's current latency.")
+@bot.tree.command(name="ping", description="Check bot latency.")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message(f"Latency: {round(bot.latency * 1000, 1)}ms", ephemeral=True)
 
-@bot.tree.command(name="shutdown", description="Shuts the bot down.")
+@bot.tree.command(name="shutdown", description="Shuts down the bot.")
 @is_staff()
 async def shutdown(interaction: discord.Interaction):
     await interaction.response.send_message("Shutting down now.")
@@ -83,19 +91,19 @@ async def on_ready():
         except Exception as e:
             print(f"❌ Failed to load extension {extension}: {e}")
 
-    # Sync commands
+    # Sync slash commands
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash command(s).")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
-    # Register persistent views and show buttons
-    bot.add_view(ReviewButtons())  # Registers button listeners
+    # Add persistent button view
+    try:
+        bot.add_view(ReviewButtons())  # Register view to persist across restarts
+        print("✅ Persistent button view registered.")
+    except Exception as e:
+        print(f"❌ Failed to register persistent button view: {e}")
 
-    channel_id = 1381803347564171286  # Submit-site-review channel
-    channel = bot.get_channel(channel_id)
-    if channel:
-        await channel.send("Click a button below to post anonymously:", view=ReviewButtons())
-
+# Run bot
 bot.run(os.environ["DISCORD_TOKEN"])
