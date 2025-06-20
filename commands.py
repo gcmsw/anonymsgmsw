@@ -65,76 +65,60 @@ class CommandsCog(commands.Cog):
         self.forum_channel_id = 1384999875237646508
 
     @app_commands.command(name="anon-newsite", description="Submit a new anonymous review for a site")
-    @app_commands.describe(site_name="Site name", message="Your review", rating="Star rating 1-5")
+    @app_commands.describe(site_name="Name of the site", message="Your review", rating="Star rating 1-5")
     async def newsite(self, interaction: Interaction, site_name: str, message: str, rating: app_commands.Range[int, 1, 5]):
         forum_channel = self.bot.get_channel(self.forum_channel_id)
         log_channel = self.bot.get_channel(self.log_channel_id)
-
         stars = "⭐" * rating
         post_content = f"{stars} - {message}"
 
         for thread in forum_channel.threads:
             if thread.name.strip().lower() == site_name.strip().lower():
                 sent_msg = await thread.send(post_content)
-                await log_channel.send(
-                    f"[ANON REDIRECTED REVIEW]\nSite: {site_name}\nRating: {rating}\nAuthor: ||{interaction.user}||\nMessage: {message}\nThread: {sent_msg.jump_url}"
-                )
-                await interaction.response.send_message(
-                    f"Looks like that site already has a post. I've posted your review to the existing thread here: {thread.mention}",
-                    ephemeral=True
-                )
+                await log_channel.send(f"[ANON REDIRECTED REVIEW]\nSite: {site_name}\nRating: {rating}\nAuthor: ||{interaction.user}||\nMessage: {message}\nThread: {sent_msg.jump_url}")
+                await interaction.response.send_message(f"Site already exists. Posted in {thread.mention}.", ephemeral=True)
                 return
 
         thread = await forum_channel.create_thread(name=site_name, content=post_content)
-        await log_channel.send(
-            f"[ANON NEW THREAD]\nSite: {site_name}\nRating: {rating}\nAuthor: ||{interaction.user}||\nMessage: {message}\nThread: {thread.message.jump_url}"
-        )
+        sent_msg = await thread.fetch_message(thread.id)
+        await log_channel.send(f"[ANON NEW THREAD]\nSite: {site_name}\nRating: {rating}\nAuthor: ||{interaction.user}||\nMessage: {message}")
         await interaction.response.send_message("Your anonymous review has been submitted.", ephemeral=True)
 
-    @app_commands.command(name="anon-addreview", description="Add a review to an existing thread")
-    @app_commands.describe(thread_id="Thread ID", message="Your review", rating="Star rating 1-5")
+    @app_commands.command(name="anon-addreview", description="Add a review to an existing site thread")
+    @app_commands.describe(thread_id="Thread to post in", message="Your review", rating="Star rating 1-5")
     async def addreview(self, interaction: Interaction, thread_id: str, message: str, rating: app_commands.Range[int, 1, 5]):
         thread = self.bot.get_channel(int(thread_id))
         log_channel = self.bot.get_channel(self.log_channel_id)
-
-        if isinstance(thread, discord.Thread):
+        if thread and isinstance(thread, discord.Thread):
             stars = "⭐" * rating
             sent_msg = await thread.send(f"{stars} - {message}")
-            await log_channel.send(
-                f"[ANON ADD REVIEW]\nThread: {thread.name}\nRating: {rating}\nAuthor: ||{interaction.user}||\nMessage: {message}\nMessage: {sent_msg.jump_url}"
-            )
+            await log_channel.send(f"[ANON ADD REVIEW]\nThread: {thread.name}\nRating: {rating}\nAuthor: ||{interaction.user}||\nMessage: {message}\nMessage: {sent_msg.jump_url}")
             await interaction.response.send_message("Your anonymous review was posted.", ephemeral=True)
         else:
             await interaction.response.send_message("Could not find that thread.", ephemeral=True)
 
-    @app_commands.command(name="anon-question", description="Ask a question anonymously")
-    @app_commands.describe(thread_id="Thread ID", message="Your question")
+    @app_commands.command(name="anon-question", description="Ask a question anonymously in a thread")
+    @app_commands.describe(thread_id="Thread to ask in", message="Your question")
     async def anon_question(self, interaction: Interaction, thread_id: str, message: str):
         thread = self.bot.get_channel(int(thread_id))
         log_channel = self.bot.get_channel(self.log_channel_id)
-
-        if isinstance(thread, discord.Thread):
+        if thread and isinstance(thread, discord.Thread):
             sent_msg = await thread.send(f"❓ - {message}")
-            await log_channel.send(
-                f"[ANON QUESTION]\nThread: {thread.name}\nAuthor: ||{interaction.user}||\nMessage: {message}\nMessage: {sent_msg.jump_url}"
-            )
+            await log_channel.send(f"[ANON QUESTION]\nThread: {thread.name}\nAuthor: ||{interaction.user}||\nMessage: {message}\nMessage: {sent_msg.jump_url}")
             await interaction.response.send_message("Your anonymous question was posted.", ephemeral=True)
         else:
             await interaction.response.send_message("Could not find that thread.", ephemeral=True)
 
-    @app_commands.command(name="anon-reply", description="Reply anonymously to a message in a thread")
-    @app_commands.describe(thread_id="Thread ID", message_id="Message ID", message="Your reply")
+    @app_commands.command(name="anon-reply", description="Reply anonymously in a thread to a message")
+    @app_commands.describe(thread_id="Thread to reply in", message_id="ID of the message to reply to", message="Your reply")
     async def anon_reply(self, interaction: Interaction, thread_id: str, message_id: str, message: str):
         thread = self.bot.get_channel(int(thread_id))
         log_channel = self.bot.get_channel(self.log_channel_id)
-
-        if isinstance(thread, discord.Thread):
+        if thread and isinstance(thread, discord.Thread):
             try:
                 reference_msg = await thread.fetch_message(int(message_id))
                 sent_msg = await thread.send(f"↩️ - {message}", reference=reference_msg)
-                await log_channel.send(
-                    f"[ANON REPLY]\nThread: {thread.name}\nAuthor: ||{interaction.user}||\nMessage: {message}\nMessage: {sent_msg.jump_url}"
-                )
+                await log_channel.send(f"[ANON REPLY]\nThread: {thread.name}\nAuthor: ||{interaction.user}||\nMessage: {message}\nMessage: {sent_msg.jump_url}")
                 await interaction.response.send_message("Your anonymous reply was posted.", ephemeral=True)
             except discord.NotFound:
                 await interaction.response.send_message("Could not find that message in the thread.", ephemeral=True)
@@ -159,22 +143,16 @@ class CommandsCog(commands.Cog):
         thread_id = interaction.namespace.thread_id
         try:
             thread = self.bot.get_channel(int(thread_id))
-            if not isinstance(thread, discord.Thread):
-                return []
             messages = [
-                msg async for msg in thread.history(limit=50)
-                if current in str(msg.id) or current.lower() in msg.content.lower()
+                message async for message in thread.history(limit=50)
+                if current in str(message.id) or current.lower() in message.content.lower()
             ]
+            return [
+                app_commands.Choice(name=f"{m.content[:50]}..." if len(m.content) > 50 else m.content, value=str(m.id))
+                for m in messages
+            ][:25]
         except:
             return []
-
-        return [
-            app_commands.Choice(
-                name=f"{msg.content[:50]}..." if len(msg.content) > 50 else msg.content,
-                value=str(msg.id)
-            )
-            for msg in messages
-        ][:25]
 
 class ButtonPanel(commands.Cog):
     def __init__(self, bot):
@@ -182,14 +160,14 @@ class ButtonPanel(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        channel_id = 1381803347564171286  # submit-site-review channel ID
+        channel_id = 1381803347564171286  # #submit-site-review
         channel = self.bot.get_channel(channel_id)
         if channel:
             try:
                 await channel.send("Click a button below to submit anonymously:", view=ReviewButtons())
-                self.bot.add_view(ReviewButtons())  # Persist view
-            except discord.Forbidden:
-                print("Bot lacks permission to send messages in the button panel channel.")
+                print("✅ Button panel sent successfully.")
+            except Exception as e:
+                print(f"❌ Failed to send button panel: {e}")
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
