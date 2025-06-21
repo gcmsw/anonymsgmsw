@@ -56,8 +56,10 @@ class SubmitModal(discord.ui.Modal):
                     await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\n{sent.jump_url}")
                     await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                     return
-            starter_message = await forum_channel.send(post_content)
-            thread = await forum_channel.create_thread(name=site_name, message=starter_message)
+
+            thread = await forum_channel.create_thread(name=site_name, content=post_content)
+            messages = [msg async for msg in thread.history(limit=1, oldest_first=True)]
+            starter_message = messages[0]
             await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\n{starter_message.jump_url}")
             await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
