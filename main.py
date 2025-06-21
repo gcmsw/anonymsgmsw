@@ -17,4 +17,7 @@ async def on_ready():
 async def load_extensions():
     await bot.load_extension("commands")
 
-if __name__ == "__main__
+if __name__ == "__main__":  # ✅ Corrected line
+    import asyncio
+    asyncio.run(load_extensions())
+    bot.run(TOKEN)
