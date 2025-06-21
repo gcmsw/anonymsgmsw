@@ -58,8 +58,7 @@ class SubmitModal(discord.ui.Modal):
                     return
 
             thread = await forum_channel.create_thread(name=site_name, content=post_content)
-            messages = [msg async for msg in thread.history(limit=1, oldest_first=True)]
-            starter_message = messages[0]
+            starter_message = thread.message
             await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\n{starter_message.jump_url}")
             await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
