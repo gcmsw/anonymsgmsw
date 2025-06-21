@@ -1,9 +1,9 @@
-# main.py
 import os
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 from commands import ReviewButtons
+
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -11,8 +11,10 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
-    bot.add_view(ReviewButtons(bot))  # Register persistent view
+    bot.add_view(ReviewButtons(bot))  # Register persistent buttons
     await bot.tree.sync()
 
-if __name__ == "__main__":
-    bot.run(TOKEN)
+async def load_extensions():
+    await bot.load_extension("commands")
+
+if __name__ == "__main__
