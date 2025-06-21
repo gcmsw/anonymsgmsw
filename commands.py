@@ -23,7 +23,6 @@ class SubmitModal(discord.ui.Modal):
         super().__init__(title=title_map[command_type])
 
         if command_type != "anon-newsite":
-            # For display only, not editable
             self.add_item(discord.ui.TextInput(label="Thread ID", default=str(thread_id), required=True))
         if command_type == "anon-reply":
             self.add_item(discord.ui.TextInput(label="Message ID to reply to", default=str(message_id or ""), required=True))
@@ -134,7 +133,6 @@ class CommandsCog(commands.Cog):
         await channel.send("Click a button below to submit anonymously:", view=ReviewButtons(self.bot))
         await interaction.response.send_message("Buttons posted!", ephemeral=True)
 
-    # Autocomplete for thread selection
     @app_commands.command(name="anon-addreview", description="Submit a review to an existing thread")
     @app_commands.describe(thread="Select the thread to review")
     async def anon_addreview(self, interaction: discord.Interaction, thread: discord.Thread):
@@ -147,8 +145,8 @@ class CommandsCog(commands.Cog):
 
     @app_commands.command(name="anon-reply", description="Reply anonymously to a message in a thread")
     @app_commands.describe(thread="Select the thread", message="Select the message ID")
-    async def anon_reply(self, interaction: discord.Interaction, thread: discord.Thread, message: discord.Message):
-        await interaction.response.send_modal(SubmitModal("anon-reply", thread_id=thread.id, message_id=message.id))
+    async def anon_reply(self, interaction: discord.Interaction, thread: discord.Thread, message: str):
+        await interaction.response.send_modal(SubmitModal("anon-reply", thread_id=thread.id, message_id=message))
 
     @anon_addreview.autocomplete('thread')
     @anon_question.autocomplete('thread')
@@ -163,7 +161,7 @@ class CommandsCog(commands.Cog):
         thread_id = interaction.namespace.thread
         thread = interaction.client.get_channel(thread_id)
         messages = [msg async for msg in thread.history(limit=50) if current.lower() in msg.content.lower()]
-        return [app_commands.Choice(name=msg.content[:100], value=msg.id) for msg in messages[:25]]
+        return [app_commands.Choice(name=msg.content[:100], value=str(msg.id)) for msg in messages[:25]]
 
 
 async def setup(bot):
