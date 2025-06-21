@@ -20,18 +20,22 @@ async def thread_autocomplete(interaction: discord.Interaction, current: str):
 
 async def message_autocomplete(interaction: discord.Interaction, current: str):
     thread_id = interaction.namespace.thread_id
-    thread = interaction.client.get_channel(int(thread_id))
-    if not thread:
+    try:
+        thread = interaction.client.get_channel(int(thread_id))
+        if not thread:
+            return []
+        messages = [msg async for msg in thread.history(limit=100)]
+        return [
+            app_commands.Choice(name=msg.content[:50], value=str(msg.id))
+            for msg in messages if current.lower() in msg.content.lower()
+        ][:25]
+    except:
         return []
-    messages = [msg async for msg in thread.history(limit=100)]
-    return [
-        app_commands.Choice(name=msg.content[:50], value=str(msg.id))
-        for msg in messages if current.lower() in msg.content.lower()
-    ][:25]
 
 class SubmitModal(discord.ui.Modal):
-    def __init__(self, command_type: str):
+    def __init__(self, command_type: str, prefill: dict = None):
         self.command_type = command_type
+        prefill = prefill or {}
         title_map = {
             "anon-newsite": "Submit New Site Review",
             "anon-addreview": "Add Review to Existing Site",
@@ -41,14 +45,37 @@ class SubmitModal(discord.ui.Modal):
         super().__init__(title=title_map[command_type])
 
         if command_type != "anon-newsite":
-            self.add_item(discord.ui.TextInput(label="Thread ID", placeholder="Paste the Thread ID (from slash autocomplete)", required=True))
+            self.add_item(discord.ui.TextInput(
+                label="Thread ID",
+                placeholder="Paste the Thread ID (from slash autocomplete)",
+                required=True,
+                default=prefill.get("thread_id", "")
+            ))
         if command_type == "anon-reply":
-            self.add_item(discord.ui.TextInput(label="Message ID to reply to", placeholder="Paste the Message ID to reply to", required=True))
+            self.add_item(discord.ui.TextInput(
+                label="Message ID to reply to",
+                placeholder="Paste the Message ID to reply to",
+                required=True,
+                default=prefill.get("message_id", "")
+            ))
         if command_type == "anon-newsite":
-            self.add_item(discord.ui.TextInput(label="Site Name", placeholder="Name of the field site you're reviewing", required=True))
+            self.add_item(discord.ui.TextInput(
+                label="Site Name",
+                placeholder="Name of the field site you're reviewing",
+                required=True
+            ))
         if command_type in ("anon-newsite", "anon-addreview"):
-            self.add_item(discord.ui.TextInput(label="Star Rating (1-5)", placeholder="Enter a number from 1 to 5", required=True))
-        self.add_item(discord.ui.TextInput(label="Message", placeholder="What do you want to say?", style=discord.TextStyle.paragraph))
+            self.add_item(discord.ui.TextInput(
+                label="Star Rating (1-5)",
+                placeholder="Enter a number from 1 to 5",
+                required=True,
+                default=prefill.get("rating", "")
+            ))
+        self.add_item(discord.ui.TextInput(
+            label="Message",
+            placeholder="What do you want to say?",
+            style=discord.TextStyle.paragraph
+        ))
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -139,19 +166,19 @@ class CommandsCog(commands.Cog):
     @app_commands.describe(thread_id="Thread ID", message_id="Message ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete, message_id=message_autocomplete)
     async def anon_reply(self, interaction: discord.Interaction, thread_id: str, message_id: str):
-        await interaction.response.send_modal(SubmitModal("anon-reply"))
+        await interaction.response.send_modal(SubmitModal("anon-reply", prefill={"thread_id": thread_id, "message_id": message_id}))
 
     @app_commands.command(name="anon-addreview", description="Add review to existing site")
     @app_commands.describe(thread_id="Thread ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete)
     async def anon_addreview(self, interaction: discord.Interaction, thread_id: str):
-        await interaction.response.send_modal(SubmitModal("anon-addreview"))
+        await interaction.response.send_modal(SubmitModal("anon-addreview", prefill={"thread_id": thread_id}))
 
     @app_commands.command(name="anon-question", description="Ask an anonymous question in a thread")
     @app_commands.describe(thread_id="Thread ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete)
     async def anon_question(self, interaction: discord.Interaction, thread_id: str):
-        await interaction.response.send_modal(SubmitModal("anon-question"))
+        await interaction.response.send_modal(SubmitModal("anon-question", prefill={"thread_id": thread_id}))
 
     @app_commands.command(name="anon-newsite", description="Create a new site thread with initial review")
     async def anon_newsite(self, interaction: discord.Interaction):
