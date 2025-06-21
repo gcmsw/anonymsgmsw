@@ -24,7 +24,7 @@ class SubmitModal(discord.ui.Modal):
             self.add_item(discord.ui.TextInput(label="Message ID to reply to"))
         if command_type == "anon-newsite":
             self.add_item(discord.ui.TextInput(label="Site Name"))
-        self.add_item(discord.ui.TextInput(label="Star Rating (1-5)", required=False))
+        self.add_item(discord.ui.TextInput(label="⭐ Star Rating (1–5 only — required)", required=True))
         self.add_item(discord.ui.TextInput(label="Message", style=discord.TextStyle.paragraph))
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -32,9 +32,23 @@ class SubmitModal(discord.ui.Modal):
         forum_channel = interaction.client.get_channel(FORUM_CHANNEL_ID)
         entries = [comp.value for comp in self.children]
 
+        def validate_rating(raw: str) -> tuple[bool, int | None]:
+            try:
+                val = int(raw)
+                if 1 <= val <= 5:
+                    return True, val
+                return False, None
+            except:
+                return False, None
+
         if self.command_type == "anon-newsite":
-            _, site_name, rating, message = entries
-            stars = "⭐" * int(rating)
+            _, site_name, rating_raw, message = entries
+            valid, rating = validate_rating(rating_raw)
+            if not valid:
+                await interaction.response.send_message("❌ Please enter a number between 1 and 5 for the star rating.", ephemeral=True)
+                return
+
+            stars = "⭐" * rating
             post_content = f"{stars} - {message}"
             for thread in forum_channel.threads:
                 if thread.name.strip().lower() == site_name.strip().lower():
@@ -42,15 +56,19 @@ class SubmitModal(discord.ui.Modal):
                     await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\n{sent.jump_url}")
                     await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                     return
-            thread = await forum_channel.create_thread(name=site_name, content=post_content)
-            starter_message = await thread.fetch_message(thread.id)
+            starter_message = await forum_channel.send(post_content)
+            thread = await forum_channel.create_thread(name=site_name, message=starter_message)
             await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\n{starter_message.jump_url}")
             await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
         elif self.command_type == "anon-addreview":
-            thread_id, _, rating, message = entries
+            thread_id, _, rating_raw, message = entries
+            valid, rating = validate_rating(rating_raw)
+            if not valid:
+                await interaction.response.send_message("❌ Please enter a number between 1 and 5 for the star rating.", ephemeral=True)
+                return
             thread = interaction.client.get_channel(int(thread_id))
-            stars = "⭐" * int(rating)
+            stars = "⭐" * rating
             sent = await thread.send(f"{stars} - {message}")
             await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\n{sent.jump_url}")
             await interaction.response.send_message("Review added to thread.", ephemeral=True)
