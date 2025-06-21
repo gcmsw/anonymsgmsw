@@ -45,7 +45,7 @@ async def on_ready():
             print(f"❌ Failed to load extension {ext}: {e}")
 
     from commands import ReviewButtons
-    bot.add_view(ReviewButtons(bot))
+    bot.add_view(ReviewButtons())
     print("✅ Registered persistent ReviewButtons view")
 
     try:
