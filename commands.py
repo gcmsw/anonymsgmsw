@@ -43,7 +43,8 @@ class SubmitModal(discord.ui.Modal):
                     await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                     return
             thread = await forum_channel.create_thread(name=site_name, content=post_content)
-            await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\n{thread.jump_url}")
+            starter_message = await thread.fetch_message(thread.id)
+            await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\n{starter_message.jump_url}")
             await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
         elif self.command_type == "anon-addreview":
