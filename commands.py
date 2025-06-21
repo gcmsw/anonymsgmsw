@@ -41,14 +41,14 @@ class SubmitModal(discord.ui.Modal):
         super().__init__(title=title_map[command_type])
 
         if command_type != "anon-newsite":
-            self.add_item(discord.ui.TextInput(label="Thread ID", required=True))
+            self.add_item(discord.ui.TextInput(label="Thread ID", placeholder="Paste the Thread ID (from slash autocomplete)", required=True))
         if command_type == "anon-reply":
-            self.add_item(discord.ui.TextInput(label="Message ID to reply to", required=True))
+            self.add_item(discord.ui.TextInput(label="Message ID to reply to", placeholder="Paste the Message ID to reply to", required=True))
         if command_type == "anon-newsite":
-            self.add_item(discord.ui.TextInput(label="Site Name", required=True))
+            self.add_item(discord.ui.TextInput(label="Site Name", placeholder="Name of the field site you're reviewing", required=True))
         if command_type in ("anon-newsite", "anon-addreview"):
-            self.add_item(discord.ui.TextInput(label="Star Rating (1-5)", required=True))
-        self.add_item(discord.ui.TextInput(label="Message", style=discord.TextStyle.paragraph))
+            self.add_item(discord.ui.TextInput(label="Star Rating (1-5)", placeholder="Enter a number from 1 to 5", required=True))
+        self.add_item(discord.ui.TextInput(label="Message", placeholder="What do you want to say?", style=discord.TextStyle.paragraph))
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -63,16 +63,11 @@ class SubmitModal(discord.ui.Modal):
                 for thread in forum_channel.threads:
                     if thread.name.strip().lower() == site_name.strip().lower():
                         sent = await thread.send(f"{stars} - {message}")
-                        await log_channel.send(
-                            f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\nSite: {site_name}\nRating: {stars}\nMessage: {message}\nLink: {sent.jump_url}"
-                        )
+                        await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                         return
-                thread_message = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-                thread = thread_message.thread
-                await log_channel.send(
-                    f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nSite: {site_name}\nRating: {stars}\nMessage: {message}\nLink: https://discord.com/channels/{interaction.guild.id}/{thread.id}"
-                )
+                thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
+                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
             elif self.command_type == "anon-addreview":
@@ -81,18 +76,14 @@ class SubmitModal(discord.ui.Modal):
                 rating_int = int(rating)
                 stars = "⭐" * rating_int
                 sent = await thread.send(f"{stars} - {message}")
-                await log_channel.send(
-                    f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\nThread: {thread.name}\nRating: {stars}\nMessage: {message}\nLink: {sent.jump_url}"
-                )
+                await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
                 await interaction.response.send_message("Review added to thread.", ephemeral=True)
 
             elif self.command_type == "anon-question":
                 thread_id, message = entries
                 thread = interaction.client.get_channel(int(thread_id))
                 sent = await thread.send(f"❓ - {message}")
-                await log_channel.send(
-                    f"[ANON QUESTION]\nAuthor: ||{interaction.user}||\nThread: {thread.name}\nMessage: {message}\nLink: {sent.jump_url}"
-                )
+                await log_channel.send(f"[ANON QUESTION]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
                 await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
 
             elif self.command_type == "anon-reply":
@@ -100,9 +91,7 @@ class SubmitModal(discord.ui.Modal):
                 thread = interaction.client.get_channel(int(thread_id))
                 ref = await thread.fetch_message(int(message_id))
                 sent = await thread.send(f"↩️ - {message}", reference=ref)
-                await log_channel.send(
-                    f"[ANON REPLY]\nAuthor: ||{interaction.user}||\nThread: {thread.name}\nReply to: {ref.jump_url}\nMessage: {message}\nLink: {sent.jump_url}"
-                )
+                await log_channel.send(f"[ANON REPLY]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
                 await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
 
         except ValueError:
@@ -150,7 +139,43 @@ class CommandsCog(commands.Cog):
     @app_commands.describe(thread_id="Thread ID", message_id="Message ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete, message_id=message_autocomplete)
     async def anon_reply(self, interaction: discord.Interaction, thread_id: str, message_id: str, message: str):
-        pass  # placeholder so autocomplete can register
+        thread = interaction.client.get_channel(int(thread_id))
+        ref = await thread.fetch_message(int(message_id))
+        sent = await thread.send(f"↩️ - {message}", reference=ref)
+        await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
+        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
+        await log_channel.send(f"[ANON REPLY - SLASH]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
+
+    @app_commands.command(name="anon-addreview", description="Add review to existing site")
+    @app_commands.describe(thread_id="Thread ID", rating="Star rating (1-5)", message="Your review message")
+    @app_commands.autocomplete(thread_id=thread_autocomplete)
+    async def anon_addreview(self, interaction: discord.Interaction, thread_id: str, rating: int, message: str):
+        thread = interaction.client.get_channel(int(thread_id))
+        stars = "⭐" * rating
+        sent = await thread.send(f"{stars} - {message}")
+        await interaction.response.send_message("Review posted anonymously.", ephemeral=True)
+        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
+        await log_channel.send(f"[ANON ADD REVIEW - SLASH]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
+
+    @app_commands.command(name="anon-question", description="Ask an anonymous question in a thread")
+    @app_commands.describe(thread_id="Thread ID", message="Your question")
+    @app_commands.autocomplete(thread_id=thread_autocomplete)
+    async def anon_question(self, interaction: discord.Interaction, thread_id: str, message: str):
+        thread = interaction.client.get_channel(int(thread_id))
+        sent = await thread.send(f"❓ - {message}")
+        await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
+        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
+        await log_channel.send(f"[ANON QUESTION - SLASH]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
+
+    @app_commands.command(name="anon-newsite", description="Create a new site thread with initial review")
+    @app_commands.describe(site_name="Name of the site", rating="Star rating (1-5)", message="Your review")
+    async def anon_newsite(self, interaction: discord.Interaction, site_name: str, rating: int, message: str):
+        forum_channel = interaction.client.get_channel(FORUM_CHANNEL_ID)
+        stars = "⭐" * rating
+        thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
+        await interaction.response.send_message("New site review thread created.", ephemeral=True)
+        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
+        await log_channel.send(f"[ANON NEW THREAD - SLASH]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
