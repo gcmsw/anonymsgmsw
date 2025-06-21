@@ -7,7 +7,7 @@ SUBMIT_CHANNEL_ID = int(os.getenv("SUBMIT_CHANNEL_ID"))
 LOG_CHANNEL_ID = 1382563380367331429
 FORUM_CHANNEL_ID = 1384999875237646508
 
-# Autocomplete functions
+# Autocomplete helpers
 async def thread_autocomplete(interaction: discord.Interaction, current: str):
     forum = interaction.client.get_channel(FORUM_CHANNEL_ID)
     if not forum:
@@ -59,21 +59,30 @@ class SubmitModal(discord.ui.Modal):
             if self.command_type == "anon-newsite":
                 site_name, rating, message = entries
                 rating_int = int(rating)
+                if not 1 <= rating_int <= 5:
+                    raise ValueError("Rating must be between 1 and 5.")
                 stars = "⭐" * rating_int
+
+                # Check if thread exists
                 for thread in forum_channel.threads:
                     if thread.name.strip().lower() == site_name.strip().lower():
                         sent = await thread.send(f"{stars} - {message}")
                         await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\n{sent.jump_url}")
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                         return
+
+                # Otherwise create new thread
                 thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nhttps://discord.com/channels/{thread.guild.id}/{thread.id}")
+                guild_id = interaction.guild.id
+                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nhttps://discord.com/channels/{guild_id}/{thread.id}")
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
             elif self.command_type == "anon-addreview":
                 thread_id, rating, message = entries
                 thread = interaction.client.get_channel(int(thread_id))
                 rating_int = int(rating)
+                if not 1 <= rating_int <= 5:
+                    raise ValueError("Rating must be between 1 and 5.")
                 stars = "⭐" * rating_int
                 sent = await thread.send(f"{stars} - {message}")
                 await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\n{sent.jump_url}")
@@ -95,7 +104,7 @@ class SubmitModal(discord.ui.Modal):
                 await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
 
         except ValueError:
-            await interaction.response.send_message("Please enter a valid number (1-5) for the star rating.", ephemeral=True)
+            await interaction.response.send_message("Please enter a valid number (1–5) for the star rating.", ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(f"Something went wrong: {e}", ephemeral=True)
 
@@ -139,7 +148,7 @@ class CommandsCog(commands.Cog):
     @app_commands.describe(thread_id="Thread ID", message_id="Message ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete, message_id=message_autocomplete)
     async def anon_reply(self, interaction: discord.Interaction, thread_id: str, message_id: str, message: str):
-        pass  # placeholder so autocomplete can register
+        pass  # placeholder for autocomplete
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
