@@ -138,44 +138,24 @@ class CommandsCog(commands.Cog):
     @app_commands.command(name="anon-reply", description="Reply anonymously to a message")
     @app_commands.describe(thread_id="Thread ID", message_id="Message ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete, message_id=message_autocomplete)
-    async def anon_reply(self, interaction: discord.Interaction, thread_id: str, message_id: str, message: str):
-        thread = interaction.client.get_channel(int(thread_id))
-        ref = await thread.fetch_message(int(message_id))
-        sent = await thread.send(f"↩️ - {message}", reference=ref)
-        await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
-        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
-        await log_channel.send(f"[ANON REPLY - SLASH]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
+    async def anon_reply(self, interaction: discord.Interaction, thread_id: str, message_id: str):
+        await interaction.response.send_modal(SubmitModal("anon-reply"))
 
     @app_commands.command(name="anon-addreview", description="Add review to existing site")
-    @app_commands.describe(thread_id="Thread ID", rating="Star rating (1-5)", message="Your review message")
+    @app_commands.describe(thread_id="Thread ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete)
-    async def anon_addreview(self, interaction: discord.Interaction, thread_id: str, rating: int, message: str):
-        thread = interaction.client.get_channel(int(thread_id))
-        stars = "⭐" * rating
-        sent = await thread.send(f"{stars} - {message}")
-        await interaction.response.send_message("Review posted anonymously.", ephemeral=True)
-        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
-        await log_channel.send(f"[ANON ADD REVIEW - SLASH]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
+    async def anon_addreview(self, interaction: discord.Interaction, thread_id: str):
+        await interaction.response.send_modal(SubmitModal("anon-addreview"))
 
     @app_commands.command(name="anon-question", description="Ask an anonymous question in a thread")
-    @app_commands.describe(thread_id="Thread ID", message="Your question")
+    @app_commands.describe(thread_id="Thread ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete)
-    async def anon_question(self, interaction: discord.Interaction, thread_id: str, message: str):
-        thread = interaction.client.get_channel(int(thread_id))
-        sent = await thread.send(f"❓ - {message}")
-        await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
-        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
-        await log_channel.send(f"[ANON QUESTION - SLASH]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
+    async def anon_question(self, interaction: discord.Interaction, thread_id: str):
+        await interaction.response.send_modal(SubmitModal("anon-question"))
 
     @app_commands.command(name="anon-newsite", description="Create a new site thread with initial review")
-    @app_commands.describe(site_name="Name of the site", rating="Star rating (1-5)", message="Your review")
-    async def anon_newsite(self, interaction: discord.Interaction, site_name: str, rating: int, message: str):
-        forum_channel = interaction.client.get_channel(FORUM_CHANNEL_ID)
-        stars = "⭐" * rating
-        thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-        await interaction.response.send_message("New site review thread created.", ephemeral=True)
-        log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
-        await log_channel.send(f"[ANON NEW THREAD - SLASH]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
+    async def anon_newsite(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(SubmitModal("anon-newsite"))
 
 async def setup(bot):
     await bot.add_cog(CommandsCog(bot))
