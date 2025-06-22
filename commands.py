@@ -96,10 +96,11 @@ class SubmitModal(discord.ui.Modal):
                     if thread.name.strip().lower() == site_name.strip().lower():
                         sent = await thread.send(f"{stars} - {message}")
                         await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
+                        await post_help_button(thread)
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                         return
                 new_thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{new_thread.id}")
+                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.parent.guild.id}/{new_thread.id}")
                 await post_help_button(new_thread)
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
@@ -162,13 +163,6 @@ class CommandsCog(commands.Cog):
         except discord.NotFound:
             pass
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.channel.id != FORUM_CHANNEL_ID or message.author.bot:
-            return
-        if isinstance(message.channel, discord.Thread):
-            await post_help_button(message.channel)
-
 # Utility to keep thread clean and re-post button
 async def post_help_button(thread):
     try:
@@ -181,5 +175,14 @@ async def post_help_button(thread):
     except Exception as e:
         print(f"Failed to update help message in thread: {e}")
 
+@commands.Cog.listener()
+async def on_message(message):
+    if message.channel.id != FORUM_CHANNEL_ID:
+        return
+    thread = message.channel
+    await post_help_button(thread)
+
 async def setup(bot):
-    await bot.add_cog(CommandsCog(bot))
+    cog = CommandsCog(bot)
+    bot.add_cog(cog)
+    bot.add_listener(on_message)
