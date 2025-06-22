@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os
+from datetime import timedelta, datetime
 
 SUBMIT_CHANNEL_ID = int(os.getenv("SUBMIT_CHANNEL_ID"))
 LOG_CHANNEL_ID = 1382563380367331429
@@ -111,9 +112,21 @@ class SubmitModal(discord.ui.Modal):
                         await post_help_button(thread)
                         return
 
-                # Create new thread with content, then fetch full thread object
+                # Create the thread (returns a ThreadWithMessage)
                 thread_with_msg = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-                thread = await interaction.client.fetch_channel(thread_with_msg.id)
+
+                # Wait briefly to ensure thread list updates
+                await discord.utils.sleep_until(datetime.utcnow() + timedelta(seconds=1))
+
+                # Fallback: Find thread by name
+                thread = next(
+                    (t for t in forum_channel.threads if t.name.strip().lower() == site_name.strip().lower()),
+                    None
+                )
+
+                if not thread:
+                    await interaction.response.send_message("Thread was created but couldn't be found. Please try again.", ephemeral=True)
+                    return
 
                 await log_channel.send(
                     f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}"
