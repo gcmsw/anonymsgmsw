@@ -23,12 +23,10 @@ class SubmitModal(discord.ui.Modal, title="Submit New Site Review"):
 
         existing_thread = discord.utils.find(lambda t: site_name.lower() in t.name.lower(), forum.threads)
         if existing_thread:
-            await existing_thread.send(f"""📌 Anonymous Review:
-{review}""")
+            await existing_thread.send(f"""📌 Anonymous Review:\n{review}""")
             await interaction.response.send_message(f"✅ Review posted to existing thread: {existing_thread.mention}", ephemeral=True)
         else:
-            new_thread = await forum.create_thread(name=site_name, content=f"📌 Anonymous Review:
-{review}")
+            new_thread = await forum.create_thread(name=site_name, content=f"📌 Anonymous Review:\n{review}")
             await interaction.response.send_message(f"✅ New site thread created: {new_thread.mention}", ephemeral=True)
             await post_help_button(new_thread, self.bot)
 
@@ -42,7 +40,6 @@ class ReviewButtons(discord.ui.View):
         await interaction.response.send_modal(SubmitModal(self.bot))
 
 async def post_help_button(thread: discord.Thread, bot):
-    # Delete old help buttons
     async for msg in thread.history(limit=50):
         if msg.author == bot.user and msg.components:
             await msg.delete()
