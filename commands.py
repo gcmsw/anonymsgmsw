@@ -24,7 +24,7 @@ async def thread_autocomplete(interaction: discord.Interaction, current: str):
 
 async def message_autocomplete(interaction: discord.Interaction, current: str):
     thread_id = getattr(interaction.namespace, "thread_id", None)
-    if not thread_id or not thread_id.isdigit():
+    if not thread_id or not str(thread_id).isdigit():
         return []
     try:
         thread = interaction.client.get_channel(int(thread_id))
@@ -96,13 +96,13 @@ class SubmitModal(discord.ui.Modal):
                     if thread.name.strip().lower() == site_name.strip().lower():
                         sent = await thread.send(f"{stars} - {message}")
                         await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
-                        await post_help_button(thread)
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
+                        await post_help_button(thread)
                         return
                 new_thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.parent.guild.id}/{new_thread.id}")
-                await post_help_button(new_thread)
+                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{new_thread.id}")
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
+                await post_help_button(new_thread)
 
             elif self.command_type == "anon-addreview":
                 thread_id, rating, message = entries
@@ -111,16 +111,16 @@ class SubmitModal(discord.ui.Modal):
                 stars = "⭐" * rating_int
                 sent = await thread.send(f"{stars} - {message}")
                 await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
-                await post_help_button(thread)
                 await interaction.response.send_message("Review added to thread.", ephemeral=True)
+                await post_help_button(thread)
 
             elif self.command_type == "anon-question":
                 thread_id, message = entries
                 thread = interaction.client.get_channel(int(thread_id))
                 sent = await thread.send(f"❓ - {message}")
                 await log_channel.send(f"[ANON QUESTION]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
-                await post_help_button(thread)
                 await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
+                await post_help_button(thread)
 
             elif self.command_type == "anon-reply":
                 thread_id, message_id, message = entries
@@ -128,8 +128,8 @@ class SubmitModal(discord.ui.Modal):
                 ref = await thread.fetch_message(int(message_id))
                 sent = await thread.send(f"↩️ - {message}", reference=ref)
                 await log_channel.send(f"[ANON REPLY]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
-                await post_help_button(thread)
                 await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
+                await post_help_button(thread)
 
         except ValueError:
             await interaction.response.send_message("Please enter a valid number (1-5) for the star rating.", ephemeral=True)
@@ -150,18 +150,15 @@ class CommandsCog(commands.Cog):
 
     @app_commands.command(name="post-buttons", description="Post the review buttons to the configured channel")
     async def post_buttons(self, interaction: discord.Interaction):
-        try:
-            if not interaction.user.guild_permissions.administrator:
-                await interaction.response.send_message("You don't have permission to run this.", ephemeral=True)
-                return
-            channel = interaction.client.get_channel(SUBMIT_CHANNEL_ID)
-            if not channel:
-                await interaction.response.send_message("Submit channel not found.", ephemeral=True)
-                return
-            await channel.send("Click a button below to submit anonymously:", view=ReviewButtons())
-            await interaction.response.send_message("Buttons posted!", ephemeral=True)
-        except discord.NotFound:
-            pass
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("You don't have permission to run this.", ephemeral=True)
+            return
+        channel = interaction.client.get_channel(SUBMIT_CHANNEL_ID)
+        if not channel:
+            await interaction.response.send_message("Submit channel not found.", ephemeral=True)
+            return
+        await channel.send("Click a button below to submit anonymously:", view=ReviewButtons())
+        await interaction.response.send_message("Buttons posted!", ephemeral=True)
 
 # Utility to keep thread clean and re-post button
 async def post_help_button(thread):
@@ -175,14 +172,5 @@ async def post_help_button(thread):
     except Exception as e:
         print(f"Failed to update help message in thread: {e}")
 
-@commands.Cog.listener()
-async def on_message(message):
-    if message.channel.id != FORUM_CHANNEL_ID:
-        return
-    thread = message.channel
-    await post_help_button(thread)
-
 async def setup(bot):
-    cog = CommandsCog(bot)
-    bot.add_cog(cog)
-    bot.add_listener(on_message)
+    await bot.add_cog(CommandsCog(bot))
