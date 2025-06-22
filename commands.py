@@ -75,6 +75,7 @@ class AnonBot(commands.Cog):
     @app_commands.command(name="anon-addreview", description="Post an anonymous review to a field site thread")
     @app_commands.describe(thread="Select the site thread", review="Your anonymous review")
     async def anon_addreview(self, interaction: discord.Interaction, thread: str, review: str):
+        print("✅ anon-addreview triggered")
         thread_obj = await interaction.guild.fetch_channel(int(thread))
         await thread_obj.send(f"📝 Anonymous Review:\n{review}")
         await interaction.response.send_message("✅ Your anonymous review was posted.", ephemeral=True)
@@ -83,6 +84,7 @@ class AnonBot(commands.Cog):
     @app_commands.command(name="anon-question", description="Post an anonymous question to a site thread")
     @app_commands.describe(thread="Select the site thread", question="Your anonymous question")
     async def anon_question(self, interaction: discord.Interaction, thread: str, question: str):
+        print("✅ anon-question triggered")
         thread_obj = await interaction.guild.fetch_channel(int(thread))
         await thread_obj.send(f"❓ Anonymous Question:\n{question}")
         await interaction.response.send_message("✅ Your anonymous question was posted.", ephemeral=True)
@@ -91,6 +93,7 @@ class AnonBot(commands.Cog):
     @app_commands.command(name="anon-reply", description="Reply anonymously to a specific message in a thread")
     @app_commands.describe(thread="Select the site thread", message_id="ID of the message to reply to", reply="Your reply")
     async def anon_reply(self, interaction: discord.Interaction, thread: str, message_id: str, reply: str):
+        print("✅ anon-reply triggered")
         try:
             thread_obj = await interaction.guild.fetch_channel(int(thread))
             message = await thread_obj.fetch_message(int(message_id))
@@ -133,10 +136,12 @@ class AnonBot(commands.Cog):
         if message.channel.parent_id != FORUM_CHANNEL_ID:
             return
         if message.author.bot:
-            return  # Already handled for bot messages
+            return
 
+        print("📎 User message detected in thread, posting help button.")
         await post_help_button(message.channel, self.bot)
 
 
 async def setup(bot):
     await bot.add_cog(AnonBot(bot))
+    print("✅ AnonBot loaded successfully.")
