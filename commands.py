@@ -102,6 +102,7 @@ class SubmitModal(discord.ui.Modal):
                 site_name, rating, message = entries
                 rating_int = int(rating)
                 stars = "⭐" * rating_int
+
                 for thread in forum_channel.threads:
                     if thread.name.strip().lower() == site_name.strip().lower():
                         sent = await thread.send(f"{stars} - {message}")
@@ -109,9 +110,12 @@ class SubmitModal(discord.ui.Modal):
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                         await post_help_button(thread)
                         return
-                sent_msg = await forum_channel.send(f"{stars} - {message}")
-                thread = await forum_channel.create_thread(name=site_name, message=sent_msg)
-                await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
+
+                starter_message = await forum_channel.parent.send(f"{stars} - {message}")
+                thread = await forum_channel.create_thread(name=site_name, message=starter_message)
+                await log_channel.send(
+                    f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}"
+                )
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
                 await post_help_button(thread)
 
