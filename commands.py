@@ -24,7 +24,7 @@ class SubmitModal(discord.ui.Modal, title="Submit New Site Review"):
         existing_thread = discord.utils.find(lambda t: site_name.lower() in t.name.lower(), forum.threads)
         if existing_thread:
             await existing_thread.send(f"""📌 Anonymous Review:
-{review_content}""")
+{review}""")
             await interaction.response.send_message(f"✅ Review posted to existing thread: {existing_thread.mention}", ephemeral=True)
         else:
             new_thread = await forum.create_thread(name=site_name, content=f"📌 Anonymous Review:
