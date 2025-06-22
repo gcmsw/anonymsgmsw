@@ -3,8 +3,8 @@ from discord import app_commands
 from discord.ext import commands
 import os
 
-SUBMIT_CHANNEL_ID = 1382563343717502996
-FORUM_CHANNEL_ID = 1384999875237646508
+SUBMIT_CHANNEL_ID = int(os.environ["SUBMIT_CHANNEL_ID"])
+FORUM_CHANNEL_ID = int(os.environ["FORUM_CHANNEL_ID"])
 GUILD_ID = discord.Object(id=int(os.environ["GUILD_ID"]))
 
 class AnonBot(commands.Cog):
@@ -88,8 +88,7 @@ class AnonBot(commands.Cog):
             await interaction.response.send_message("❌ Submit channel not found.", ephemeral=True)
             return
 
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Submit New Site Review", style=discord.ButtonStyle.primary, custom_id="submit_new_site_review"))
+        view = ReviewButtons(self.bot)
         await submit_channel.send("📝 Click the button below to submit a new site review:", view=view)
         await interaction.response.send_message("✅ Button panel posted.", ephemeral=True)
 
@@ -100,9 +99,21 @@ class AnonBot(commands.Cog):
         if message.channel.parent_id != FORUM_CHANNEL_ID:
             return
         if message.author.bot:
-            return  # Already handled elsewhere
-
+            return
         await self.ensure_help_button(message.channel)
+
+
+class ReviewButtons(discord.ui.View):
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(label="Submit New Site Review", style=discord.ButtonStyle.primary, custom_id="submit_new_site_review")
+    async def submit_review(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            "🔗 Please use `/anon-addreview` to submit your review. You can select the appropriate thread by name.",
+            ephemeral=True
+        )
 
 
 async def setup(bot):
