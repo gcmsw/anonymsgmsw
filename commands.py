@@ -111,8 +111,10 @@ class SubmitModal(discord.ui.Modal):
                         await post_help_button(thread)
                         return
 
-                starter_message = await forum_channel.parent.send(f"{stars} - {message}")
-                thread = await forum_channel.create_thread(name=site_name, message=starter_message)
+                # Create new thread with content, then fetch full thread object
+                thread_with_msg = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
+                thread = await interaction.client.fetch_channel(thread_with_msg.id)
+
                 await log_channel.send(
                     f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}"
                 )
@@ -184,7 +186,6 @@ class CommandsCog(commands.Cog):
             await interaction.response.send_message("Submit channel not found.", ephemeral=True)
             return
 
-        # Delete old button messages to prevent duplicates
         async for msg in channel.history(limit=20):
             if msg.author == interaction.client.user and msg.components:
                 await msg.delete()
