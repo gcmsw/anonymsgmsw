@@ -93,7 +93,6 @@ class SubmitModal(discord.ui.Modal):
                     if msg.author == interaction.client.user and msg.components:
                         if msg.components[0].children[0].custom_id == HELP_BUTTON_CUSTOM_ID:
                             await msg.delete()
-                            break
                 await thread.send(
                     "Use the slash commands below to anonymously add reviews, questions, or replies in this thread.",
                     view=HelpButtonView()
@@ -110,7 +109,8 @@ class SubmitModal(discord.ui.Modal):
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                         await post_help_button(thread)
                         return
-                thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
+                sent_msg = await forum_channel.send(f"{stars} - {message}")
+                thread = await forum_channel.create_thread(name=site_name, message=sent_msg)
                 await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
                 await post_help_button(thread)
@@ -179,6 +179,12 @@ class CommandsCog(commands.Cog):
         if not channel:
             await interaction.response.send_message("Submit channel not found.", ephemeral=True)
             return
+
+        # Delete old button messages to prevent duplicates
+        async for msg in channel.history(limit=20):
+            if msg.author == interaction.client.user and msg.components:
+                await msg.delete()
+
         await channel.send("Click a button below to submit anonymously:", view=ReviewButtons())
         await interaction.response.send_message("Buttons posted!", ephemeral=True)
 
