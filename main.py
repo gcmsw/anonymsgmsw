@@ -57,6 +57,23 @@ async def on_ready():
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
+    # Auto-post persistent button if not already there
+    submit_channel = bot.get_channel(int(os.environ["SUBMIT_CHANNEL_ID"]))
+    if submit_channel:
+        async for message in submit_channel.history(limit=10):
+            if message.author == bot.user and message.components:
+                print("ℹ️ Submit button already present.")
+                break
+        else:
+            await submit_channel.send(
+                "📝 Click the button below to submit a new site review:",
+                view=ReviewButtons(bot)
+            )
+            print("✅ Posted submit review button.")
+    else:
+        print("❌ Could not find submit channel.")
+
+
 async def main():
     async with bot:
         await bot.start(os.environ["DISCORD_TOKEN"])
