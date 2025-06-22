@@ -95,10 +95,12 @@ class SubmitModal(discord.ui.Modal):
                     if thread.name.strip().lower() == site_name.strip().lower():
                         sent = await thread.send(f"{stars} - {message}")
                         await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
+                        await thread.send(view=HelpButtons())
                         await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
                         return
                 thread = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
                 await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
+                await thread.send(view=HelpButtons())
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
             elif self.command_type == "anon-addreview":
@@ -108,6 +110,7 @@ class SubmitModal(discord.ui.Modal):
                 stars = "⭐" * rating_int
                 sent = await thread.send(f"{stars} - {message}")
                 await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
+                await thread.send(view=HelpButtons())
                 await interaction.response.send_message("Review added to thread.", ephemeral=True)
 
             elif self.command_type == "anon-question":
@@ -115,6 +118,7 @@ class SubmitModal(discord.ui.Modal):
                 thread = interaction.client.get_channel(int(thread_id))
                 sent = await thread.send(f"❓ - {message}")
                 await log_channel.send(f"[ANON QUESTION]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
+                await thread.send(view=HelpButtons())
                 await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
 
             elif self.command_type == "anon-reply":
@@ -123,6 +127,7 @@ class SubmitModal(discord.ui.Modal):
                 ref = await thread.fetch_message(int(message_id))
                 sent = await thread.send(f"↩️ - {message}", reference=ref)
                 await log_channel.send(f"[ANON REPLY]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
+                await thread.send(view=HelpButtons())
                 await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
 
         except ValueError:
@@ -138,21 +143,20 @@ class ReviewButtons(discord.ui.View):
     async def newsite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(SubmitModal("anon-newsite"))
 
-class HelpButtonView(discord.ui.View):
+class HelpButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="How to Post Anonymously", style=discord.ButtonStyle.secondary, custom_id="help_button")
+    @discord.ui.button(label="How to Post Anonymously", style=discord.ButtonStyle.secondary, custom_id="btn_help")
     async def help_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(discord.ui.Modal(
-            title="Anonymous Posting Guide",
+            title="Anonymous Post Help",
             children=[
                 discord.ui.TextInput(
-                    label="Instructions",
-                    default="Use /anon-addreview to add a review to this site, /anon-question to ask a question, or /anon-reply to reply anonymously to a message. Use autocomplete to select the right thread/message.",
+                    label="Reminder",
+                    value="Use /anon-addreview, /anon-question, or /anon-reply with autocomplete. Then fill out the modal to complete.",
                     style=discord.TextStyle.paragraph,
-                    required=False,
-                    max_length=400
+                    required=False
                 )
             ]
         ))
@@ -160,17 +164,6 @@ class HelpButtonView(discord.ui.View):
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    @commands.Cog.listener()
-    async def on_thread_create(self, thread):
-        if thread.parent_id == FORUM_CHANNEL_ID:
-            try:
-                async for msg in thread.history(limit=20):
-                    if msg.author.bot and any(btn.custom_id == "help_button" for btn in msg.components[0].children):
-                        await msg.delete()
-                await thread.send("Need help?", view=HelpButtonView())
-            except Exception as e:
-                print(f"❌ Failed to send help button in new thread: {e}")
 
     @app_commands.command(name="post-buttons", description="Post the review buttons to the configured channel")
     async def post_buttons(self, interaction: discord.Interaction):
@@ -181,8 +174,13 @@ class CommandsCog(commands.Cog):
         if not channel:
             await interaction.response.send_message("Submit channel not found.", ephemeral=True)
             return
-        await channel.send("Click to start your anonymous site review:", view=ReviewButtons())
+        await channel.send("Click a button below to submit a new site review:", view=ReviewButtons())
         await interaction.response.send_message("Buttons posted!", ephemeral=True)
+
+    @app_commands.command(name="post-help", description="Post the help buttons to the current thread")
+    async def post_help(self, interaction: discord.Interaction):
+        await interaction.channel.send(view=HelpButtons())
+        await interaction.response.send_message("Help button posted.", ephemeral=True)
 
     @app_commands.command(name="anon-reply", description="Reply anonymously to a message")
     @app_commands.describe(thread_id="Thread ID", message_id="Message ID")
