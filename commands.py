@@ -1,20 +1,18 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.utils import get
 import os
 
-GUILD_ID = discord.Object(id=YOUR_GUILD_ID_HERE)  # Replace with actual guild ID
 SUBMIT_CHANNEL_ID = 1382563343717502996
 FORUM_CHANNEL_ID = 1384999875237646508
-LOG_CHANNEL_ID = YOUR_LOG_CHANNEL_ID  # Optional: logging channel
+
+GUILD_ID = discord.Object(id=int(os.environ["GUILD_ID"]))
 
 class AnonBot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     async def ensure_help_button(self, thread: discord.Thread):
-        # Delete old help buttons
         async for message in thread.history(limit=50, oldest_first=False):
             if message.author == self.bot.user and message.components:
                 await message.delete()
@@ -101,6 +99,18 @@ class AnonBot(commands.Cog):
             ][:25]
         except:
             return []
+
+    @app_commands.command(name="post-buttons", description="Post the Submit New Site Review button in the submit channel.")
+    async def post_buttons(self, interaction: discord.Interaction):
+        submit_channel = interaction.guild.get_channel(SUBMIT_CHANNEL_ID)
+        if not submit_channel:
+            await interaction.response.send_message("❌ Submit channel not found.", ephemeral=True)
+            return
+
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Submit New Site Review", style=discord.ButtonStyle.primary, custom_id="submit_new_site_review"))
+        await submit_channel.send("📝 Click the button below to submit a new site review:", view=view)
+        await interaction.response.send_message("✅ Button panel posted.", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_message(self, message):
