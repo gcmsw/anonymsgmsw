@@ -75,7 +75,6 @@ class AnonBot(commands.Cog):
     @app_commands.command(name="anon-addreview", description="Post an anonymous review to a field site thread")
     @app_commands.describe(thread="Select the site thread", review="Your anonymous review")
     async def anon_addreview(self, interaction: discord.Interaction, thread: str, review: str):
-        print("✅ anon-addreview triggered")
         thread_obj = await interaction.guild.fetch_channel(int(thread))
         await thread_obj.send(f"📝 Anonymous Review:\n{review}")
         await interaction.response.send_message("✅ Your anonymous review was posted.", ephemeral=True)
@@ -84,7 +83,6 @@ class AnonBot(commands.Cog):
     @app_commands.command(name="anon-question", description="Post an anonymous question to a site thread")
     @app_commands.describe(thread="Select the site thread", question="Your anonymous question")
     async def anon_question(self, interaction: discord.Interaction, thread: str, question: str):
-        print("✅ anon-question triggered")
         thread_obj = await interaction.guild.fetch_channel(int(thread))
         await thread_obj.send(f"❓ Anonymous Question:\n{question}")
         await interaction.response.send_message("✅ Your anonymous question was posted.", ephemeral=True)
@@ -93,7 +91,6 @@ class AnonBot(commands.Cog):
     @app_commands.command(name="anon-reply", description="Reply anonymously to a specific message in a thread")
     @app_commands.describe(thread="Select the site thread", message_id="ID of the message to reply to", reply="Your reply")
     async def anon_reply(self, interaction: discord.Interaction, thread: str, message_id: str, reply: str):
-        print("✅ anon-reply triggered")
         try:
             thread_obj = await interaction.guild.fetch_channel(int(thread))
             message = await thread_obj.fetch_message(int(message_id))
@@ -102,6 +99,19 @@ class AnonBot(commands.Cog):
             await post_help_button(thread_obj, self.bot)
         except:
             await interaction.response.send_message("⚠️ Could not find the message. Please check the ID.", ephemeral=True)
+
+    @app_commands.command(name="post-buttons", description="Manually post the Submit New Site Review button.")
+    async def post_buttons(self, interaction: discord.Interaction):
+        submit_channel = interaction.guild.get_channel(SUBMIT_CHANNEL_ID)
+        if not submit_channel:
+            await interaction.response.send_message("❌ Submit channel not found.", ephemeral=True)
+            return
+
+        await submit_channel.send(
+            "📝 Click the button below to submit a new site review:",
+            view=ReviewButtons(self.bot)
+        )
+        await interaction.response.send_message("✅ Submit button posted.", ephemeral=True)
 
     @anon_addreview.autocomplete("thread")
     @anon_question.autocomplete("thread")
@@ -137,8 +147,6 @@ class AnonBot(commands.Cog):
             return
         if message.author.bot:
             return
-
-        print("📎 User message detected in thread, posting help button.")
         await post_help_button(message.channel, self.bot)
 
 
