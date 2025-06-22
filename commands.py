@@ -43,43 +43,35 @@ class SubmitModal(discord.ui.Modal):
         self.prefill_data = prefill_data or {}
         title_map = {
             "anon-newsite": "Submit New Site Review",
-            "anon-addreview": "Add Review to Existing Site",
-            "anon-question": "Ask Anonymous Question",
-            "anon-reply": "Reply Anonymously to Message",
+            "teach-slash": "How to Use Slash Commands"
         }
         super().__init__(title=title_map[command_type])
 
-        if command_type != "anon-newsite":
-            self.add_item(discord.ui.TextInput(
-                label="Thread ID",
-                placeholder="Paste the Thread ID (from slash autocomplete)",
-                default=self.prefill_data.get("thread_id", ""),
-                required=True
-            ))
-        if command_type == "anon-reply":
-            self.add_item(discord.ui.TextInput(
-                label="Message ID to reply to",
-                placeholder="Paste the Message ID to reply to",
-                default=self.prefill_data.get("message_id", ""),
-                required=True
-            ))
         if command_type == "anon-newsite":
             self.add_item(discord.ui.TextInput(
                 label="Site Name",
                 placeholder="Name of the field site you're reviewing",
                 required=True
             ))
-        if command_type in ("anon-newsite", "anon-addreview"):
             self.add_item(discord.ui.TextInput(
                 label="Star Rating (1-5)",
                 placeholder="Enter a number from 1 to 5",
                 required=True
             ))
-        self.add_item(discord.ui.TextInput(
-            label="Message",
-            placeholder="What do you want to say?",
-            style=discord.TextStyle.paragraph
-        ))
+            self.add_item(discord.ui.TextInput(
+                label="Message",
+                placeholder="What do you want to say?",
+                style=discord.TextStyle.paragraph
+            ))
+        elif command_type == "teach-slash":
+            self.add_item(discord.ui.TextInput(
+                label="How to Use Slash Commands",
+                placeholder="/anon-addreview to post reviews, /anon-question to ask, /anon-reply to respond",
+                default="\n\u2022 Use /anon-addreview to post a review to this thread.\n\u2022 Use /anon-question to ask a question anonymously.\n\u2022 Use /anon-reply to respond to a message anonymously.\n\nYou must select the appropriate Thread ID and Message ID (if replying).",
+                style=discord.TextStyle.paragraph,
+                required=False,
+                max_length=4000
+            ))
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -101,29 +93,8 @@ class SubmitModal(discord.ui.Modal):
                 await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
                 await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
 
-            elif self.command_type == "anon-addreview":
-                thread_id, rating, message = entries
-                thread = interaction.client.get_channel(int(thread_id))
-                rating_int = int(rating)
-                stars = "⭐" * rating_int
-                sent = await thread.send(f"{stars} - {message}")
-                await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
-                await interaction.response.send_message("Review added to thread.", ephemeral=True)
-
-            elif self.command_type == "anon-question":
-                thread_id, message = entries
-                thread = interaction.client.get_channel(int(thread_id))
-                sent = await thread.send(f"❓ - {message}")
-                await log_channel.send(f"[ANON QUESTION]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
-                await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
-
-            elif self.command_type == "anon-reply":
-                thread_id, message_id, message = entries
-                thread = interaction.client.get_channel(int(thread_id))
-                ref = await thread.fetch_message(int(message_id))
-                sent = await thread.send(f"↩️ - {message}", reference=ref)
-                await log_channel.send(f"[ANON REPLY]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
-                await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
+            elif self.command_type == "teach-slash":
+                await interaction.response.send_message("Slash command help shown above. You can dismiss this modal.", ephemeral=True)
 
         except ValueError:
             await interaction.response.send_message("Please enter a valid number (1-5) for the star rating.", ephemeral=True)
@@ -134,42 +105,42 @@ class ReviewButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="New Site Review", style=discord.ButtonStyle.primary, custom_id="btn_newsite")
+    @discord.ui.button(label="Submit New Site Review", style=discord.ButtonStyle.primary, custom_id="btn_newsite")
     async def newsite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(SubmitModal("anon-newsite"))
 
-    @discord.ui.button(label="Review Existing Site", style=discord.ButtonStyle.primary, custom_id="btn_addreview")
-    async def addreview_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(SubmitModal("anon-addreview"))
+class ThreadHelpButton(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    @discord.ui.button(label="Ask Question", style=discord.ButtonStyle.secondary, custom_id="btn_question")
-    async def question_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(SubmitModal("anon-question"))
-
-    @discord.ui.button(label="Reply", style=discord.ButtonStyle.secondary, custom_id="btn_reply")
-    async def reply_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(SubmitModal("anon-reply"))
+    @discord.ui.button(label="How to Post Anonymously", style=discord.ButtonStyle.secondary, custom_id="btn_teachslash")
+    async def teachslash_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(SubmitModal("teach-slash"))
 
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="post-buttons", description="Post the review buttons to the configured channel")
+    @app_commands.command(name="post-buttons", description="Post the review or help buttons to their respective channels")
     async def post_buttons(self, interaction: discord.Interaction):
         if not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message("You don't have permission to run this.", ephemeral=True)
             return
-        channel = interaction.client.get_channel(SUBMIT_CHANNEL_ID)
-        if not channel:
-            await interaction.response.send_message("Submit channel not found.", ephemeral=True)
-            return
-        await channel.send("Click a button below to submit anonymously:", view=ReviewButtons())
-        await interaction.response.send_message("Buttons posted!", ephemeral=True)
+        submit_channel = interaction.client.get_channel(SUBMIT_CHANNEL_ID)
+        forum_channel = interaction.client.get_channel(FORUM_CHANNEL_ID)
+        if submit_channel:
+            await submit_channel.send("Submit a new site review:", view=ReviewButtons())
+        for thread in forum_channel.threads:
+            await thread.send("Need help posting anonymously?", view=ThreadHelpButton())
+        await interaction.response.send_message("Buttons posted to submit and forum threads.", ephemeral=True)
 
     @app_commands.command(name="anon-reply", description="Reply anonymously to a message")
     @app_commands.describe(thread_id="Thread ID", message_id="Message ID")
     @app_commands.autocomplete(thread_id=thread_autocomplete, message_id=message_autocomplete)
     async def anon_reply(self, interaction: discord.Interaction, thread_id: str, message_id: str):
+        thread = interaction.client.get_channel(int(thread_id))
+        ref = await thread.fetch_message(int(message_id))
+        sent = await thread.send(f"↩️ - Use the modal to complete your anonymous reply.", reference=ref)
         await interaction.response.send_modal(SubmitModal("anon-reply", prefill_data={
             "thread_id": thread_id,
             "message_id": message_id
