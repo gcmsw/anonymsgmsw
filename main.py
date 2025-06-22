@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from keep_alive import keep_alive
+from commands import HelpButtonView
 
 keep_alive()
 
@@ -44,12 +45,10 @@ async def on_ready():
         except Exception as e:
             print(f"❌ Failed to load extension {ext}: {e}")
 
-    # Register persistent view for the Submit Review button
     from commands import ReviewButtons
-    bot.add_view(ReviewButtons(bot))
+    bot.add_view(ReviewButtons())
     print("✅ Registered persistent ReviewButtons view")
 
-    # Sync slash commands
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
@@ -58,4 +57,31 @@ async def on_ready():
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
-bot.run(os.environ["DISCORD_TOKEN"])
+@bot.event
+async def on_message(message: discord.Message):
+    try:
+        if message.author.bot:
+            return  # Ignore bot messages from other bots
+
+        forum_channel_id = int(os.getenv("FORUM_CHANNEL_ID"))
+        if not isinstance(message.channel, discord.Thread):
+            return
+        if message.channel.parent_id != forum_channel_id:
+            return
+
+        thread = message.channel
+
+        # Delete old help button messages from the bot
+        async for msg in thread.history(limit=50):
+            if msg.author == bot.user and msg.components:
+                if msg.components[0].children[0].custom_id == "thread_help_button":
+                    await msg.delete()
+
+        # Post new help button
+        await thread.send(
+            "Use the slash commands below to anonymously add reviews, questions, or replies in this thread.",
+            view=HelpButtonView()
+        )
+
+    except Exception as e:
+        print(f"❌ Error posting help button in thread: {e}")
