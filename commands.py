@@ -5,7 +5,6 @@ import os
 
 SUBMIT_CHANNEL_ID = 1382563343717502996
 FORUM_CHANNEL_ID = 1384999875237646508
-
 GUILD_ID = discord.Object(id=int(os.environ["GUILD_ID"]))
 
 class AnonBot(commands.Cog):
@@ -26,51 +25,33 @@ class AnonBot(commands.Cog):
 
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Learn how to post anonymously", style=discord.ButtonStyle.secondary, disabled=True))
-
         await thread.send(embed=embed, view=view)
-
-    async def post_to_forum(self, interaction, site_name, review_text):
-        forum = interaction.guild.get_channel(FORUM_CHANNEL_ID)
-        thread = None
-
-        for t in forum.threads:
-            if t.name.lower() == site_name.lower():
-                thread = t
-                break
-
-        if not thread:
-            thread = await forum.create_thread(name=site_name, content=review_text)
-            await interaction.response.send_message(f"✅ New thread created for **{site_name}**.", ephemeral=True)
-        else:
-            await thread.send(review_text)
-            await interaction.response.send_message(
-                f"📌 Your review was added to the existing thread: {thread.mention}", ephemeral=True
-            )
-
-        await self.ensure_help_button(thread)
 
     @app_commands.command(name="anon-addreview", description="Post an anonymous review to a field site thread")
     @app_commands.describe(thread="Select the site thread", review="Your anonymous review")
-    async def anon_addreview(self, interaction: discord.Interaction, thread: discord.Thread, review: str):
-        await thread.send(f"📝 Anonymous Review:\n{review}")
+    async def anon_addreview(self, interaction: discord.Interaction, thread: str, review: str):
+        thread_obj = await interaction.guild.fetch_channel(int(thread))
+        await thread_obj.send(f"📝 Anonymous Review:\n{review}")
         await interaction.response.send_message("✅ Your anonymous review was posted.", ephemeral=True)
-        await self.ensure_help_button(thread)
+        await self.ensure_help_button(thread_obj)
 
     @app_commands.command(name="anon-question", description="Post an anonymous question to a site thread")
     @app_commands.describe(thread="Select the site thread", question="Your anonymous question")
-    async def anon_question(self, interaction: discord.Interaction, thread: discord.Thread, question: str):
-        await thread.send(f"❓ Anonymous Question:\n{question}")
+    async def anon_question(self, interaction: discord.Interaction, thread: str, question: str):
+        thread_obj = await interaction.guild.fetch_channel(int(thread))
+        await thread_obj.send(f"❓ Anonymous Question:\n{question}")
         await interaction.response.send_message("✅ Your anonymous question was posted.", ephemeral=True)
-        await self.ensure_help_button(thread)
+        await self.ensure_help_button(thread_obj)
 
     @app_commands.command(name="anon-reply", description="Reply anonymously to a specific message in a thread")
     @app_commands.describe(thread="Select the site thread", message_id="ID of the message to reply to", reply="Your reply")
-    async def anon_reply(self, interaction: discord.Interaction, thread: discord.Thread, message_id: str, reply: str):
+    async def anon_reply(self, interaction: discord.Interaction, thread: str, message_id: str, reply: str):
         try:
-            message = await thread.fetch_message(int(message_id))
+            thread_obj = await interaction.guild.fetch_channel(int(thread))
+            message = await thread_obj.fetch_message(int(message_id))
             await message.reply(f"💬 Anonymous Reply:\n{reply}")
             await interaction.response.send_message("✅ Your anonymous reply was posted.", ephemeral=True)
-            await self.ensure_help_button(thread)
+            await self.ensure_help_button(thread_obj)
         except:
             await interaction.response.send_message("⚠️ Could not find the message. Please check the ID.", ephemeral=True)
 
@@ -87,11 +68,11 @@ class AnonBot(commands.Cog):
 
     @anon_reply.autocomplete("message_id")
     async def autocomplete_message_id(self, interaction: discord.Interaction, current: str):
-        thread = interaction.namespace.thread
-        if not thread:
+        thread_id = interaction.namespace.thread
+        if not thread_id:
             return []
         try:
-            thread_obj = await interaction.guild.fetch_channel(int(thread.id))
+            thread_obj = await interaction.guild.fetch_channel(int(thread_id))
             messages = [msg async for msg in thread_obj.history(limit=50)]
             return [
                 app_commands.Choice(name=f"{m.author.display_name}: {m.content[:30]}", value=str(m.id))
