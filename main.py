@@ -15,7 +15,6 @@ bot = commands.Bot(command_prefix="?", intents=intents)
 
 initial_extensions = ["commands"]
 
-# Role-based permission check for shutdown command
 def is_staff():
     async def predicate(interaction: discord.Interaction) -> bool:
         try:
@@ -25,12 +24,10 @@ def is_staff():
             return False
     return app_commands.check(predicate)
 
-# Simple ping command
 @bot.tree.command(name="ping", description="Check latency")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message(f"Pong! Latency: {round(bot.latency * 1000)}ms", ephemeral=True)
 
-# Shutdown command for admins only
 @bot.tree.command(name="shutdown", description="Shuts down the bot")
 @is_staff()
 async def shutdown(interaction: discord.Interaction):
@@ -41,7 +38,6 @@ async def shutdown(interaction: discord.Interaction):
 async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your confessions 🙀"))
 
-    # Load extensions
     for ext in initial_extensions:
         try:
             await bot.load_extension(ext)
@@ -49,12 +45,10 @@ async def on_ready():
         except Exception as e:
             print(f"❌ Failed to load extension {ext}: {e}")
 
-    # Register persistent view for Submit Review Button
     from commands import ReviewButtons
     bot.add_view(ReviewButtons(bot))
     print("✅ Registered persistent ReviewButtons view")
 
-    # Sync slash commands
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
