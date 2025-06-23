@@ -111,9 +111,8 @@ class SubmitModal(discord.ui.Modal):
                         await post_help_button(thread)
                         return
 
-                # Create new thread with content, then fetch full thread object
                 thread_with_msg = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
-                thread = await interaction.client.fetch_channel(thread_with_msg.id)
+                thread = thread_with_msg.thread  # Fix: Use .thread instead of .id
 
                 await log_channel.send(
                     f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}"
