@@ -7,21 +7,25 @@ class DebugCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        print("on_message fired")
-        print(f"Author: {message.author}")
-        print(f"Channel: {message.channel}")
+        try:
+            print("[DEBUG] on_message fired")
+            print(f"[DEBUG] Author: {message.author} | Bot? {message.author.bot}")
+            print(f"[DEBUG] Channel: {message.channel}")
 
-        if message.author.bot:
-            print("Ignored bot message")
-            return
+            if message.author.bot:
+                print("[DEBUG] Ignored bot message")
+                return
 
-        if isinstance(message.channel, discord.Thread):
-            parent = message.channel.parent
-            print(f"Parent: {parent}")
-            if isinstance(parent, discord.ForumChannel):
-                print("In a forum channel")
-                if parent.id == 1384999875237646508:
-                    print("Correct forum ID matched. Should trigger help button logic here.")
+            if isinstance(message.channel, discord.Thread):
+                parent = message.channel.parent
+                print(f"[DEBUG] Parent channel: {parent} | Type: {type(parent)}")
+                if isinstance(parent, discord.ForumChannel):
+                    print("[DEBUG] Thread is inside a forum")
+                    if parent.id == 1384999875237646508:
+                        print("[DEBUG] Matched target forum channel ID")
+                        await message.channel.send("[DEBUG] This is a test response from on_message listener")
+        except Exception as e:
+            print(f"[ERROR] on_message failed: {e}")
 
 async def setup(bot):
     await bot.add_cog(DebugCog(bot))
