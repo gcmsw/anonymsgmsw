@@ -10,6 +10,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.members = True
+intents.messages = True  # Required for on_message listener
 bot = commands.Bot(command_prefix="?", intents=intents)
 
 initial_extensions = ["commands"]
@@ -35,7 +36,7 @@ async def shutdown(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your confessions 🙀"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your confessions 😮"))
 
     for ext in initial_extensions:
         try:
@@ -46,7 +47,7 @@ async def on_ready():
 
     from commands import ReviewButtons
     bot.add_view(ReviewButtons())
-    print("✅ Registered persistent ReviewButtons view")
+    print("\u2705 Registered persistent ReviewButtons view")
 
     try:
         synced = await bot.tree.sync()
