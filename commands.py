@@ -69,6 +69,8 @@ class SubmitModal(discord.ui.Modal):
             forum_channel = interaction.client.get_channel(FORUM_CHANNEL_ID)
             site_name, rating, message = [comp.value for comp in self.children]
             rating_int = int(rating)
+            if rating_int < 1 or rating_int > 5:
+                raise ValueError("Rating must be between 1 and 5.")
             stars = "⭐" * rating_int
 
             for thread in forum_channel.threads:
@@ -165,6 +167,9 @@ class CommandsCog(commands.Cog):
     @app_commands.autocomplete(thread_id=thread_autocomplete)
     async def anon_addreview(self, interaction: discord.Interaction, thread_id: str, rating: int, message: str):
         try:
+            if rating < 1 or rating > 5:
+                await interaction.response.send_message("Star rating must be between 1 and 5.", ephemeral=True)
+                return
             thread = interaction.client.get_channel(int(thread_id))
             stars = "⭐" * rating
             sent = await thread.send(f"{stars} - {message}")
