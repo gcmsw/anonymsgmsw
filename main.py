@@ -3,7 +3,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from keep_alive import keep_alive
-from commands import HelpButtonView
 
 keep_alive()
 
@@ -56,42 +55,5 @@ async def on_ready():
         print(f"❌ Slash command sync failed: {e}")
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
-
-@bot.event
-async def on_message(message: discord.Message):
-    try:
-        if message.author.bot:
-            return  # Skip ALL bot messages, including our own
-
-        forum_channel_id = int(os.getenv("FORUM_CHANNEL_ID"))
-
-        # Only run if this is a thread in the correct forum
-        if not isinstance(message.channel, discord.Thread):
-            return
-        if message.channel.parent_id != forum_channel_id:
-            return
-
-        thread = message.channel
-
-        # Delete any old help button messages posted by the bot
-        async for msg in thread.history(limit=50):
-            try:
-                if msg.author == bot.user and msg.components:
-                    for row in msg.components:
-                        for component in row.children:
-                            if component.custom_id == "thread_help_button":
-                                await msg.delete()
-                                break
-            except Exception as e:
-                print(f"⚠️ Failed to inspect/delete message: {e}")
-
-        # Send the help button to the bottom of the thread
-        await thread.send(
-            "Use the slash commands below to anonymously add reviews, questions, or replies in this thread.",
-            view=HelpButtonView()
-        )
-
-    except Exception as e:
-        print(f"❌ on_message failed: {e}")
 
 bot.run(os.environ["DISCORD_TOKEN"])
