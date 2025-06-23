@@ -13,7 +13,8 @@ intents.members = True
 intents.messages = True  # Required for on_message listener
 bot = commands.Bot(command_prefix="?", intents=intents)
 
-initial_extensions = ["commands"]
+# Put this near the top of main.py, after bot is defined
+initial_extensions = ["commands", "debug-on-message"]  # This tells main.py to load both command and debug logic
 
 def is_staff():
     async def predicate(interaction: discord.Interaction) -> bool:
