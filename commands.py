@@ -38,13 +38,65 @@ async def message_autocomplete(interaction: discord.Interaction, current: str):
     except Exception:
         return []
 
+class SubmitModal(discord.ui.Modal):
+    def __init__(self, command_type: str, prefill_data: dict = None):
+        self.command_type = command_type
+        self.prefill_data = prefill_data or {}
+        title_map = {
+            "anon-newsite": "Submit New Site Review",
+        }
+        super().__init__(title=title_map[command_type])
+
+        self.add_item(discord.ui.TextInput(
+            label="Site Name",
+            placeholder="Name of the field site you're reviewing",
+            required=True
+        ))
+        self.add_item(discord.ui.TextInput(
+            label="Star Rating (1-5)",
+            placeholder="Enter a number from 1 to 5",
+            required=True
+        ))
+        self.add_item(discord.ui.TextInput(
+            label="Message",
+            placeholder="What do you want to say?",
+            style=discord.TextStyle.paragraph
+        ))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
+            forum_channel = interaction.client.get_channel(FORUM_CHANNEL_ID)
+            site_name, rating, message = [comp.value for comp in self.children]
+            rating_int = int(rating)
+            stars = "⭐" * rating_int
+
+            for thread in forum_channel.threads:
+                if thread.name.strip().lower() == site_name.strip().lower():
+                    sent = await thread.send(f"{stars} - {message}")
+                    await log_channel.send(f"[ANON REDIRECTED REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
+                    await interaction.response.send_message(f"Posted to existing thread: {thread.mention}", ephemeral=True)
+                    await post_help_button(thread, interaction.client)
+                    return
+
+            thread_with_msg = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
+            thread = thread_with_msg.thread
+
+            await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
+            await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
+            await post_help_button(thread, interaction.client)
+
+        except ValueError:
+            await interaction.response.send_message("Please enter a valid number (1-5) for the star rating.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"Something went wrong: {e}", ephemeral=True)
+
 class ReviewButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
     @discord.ui.button(label="New Site Review", style=discord.ButtonStyle.primary, custom_id="btn_newsite")
     async def newsite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        from commands import SubmitModal
         await interaction.response.send_modal(SubmitModal("anon-newsite"))
 
 class HelpButtonView(discord.ui.View):
@@ -54,9 +106,23 @@ class HelpButtonView(discord.ui.View):
     @discord.ui.button(label="How to Post Anonymously", style=discord.ButtonStyle.secondary, custom_id=HELP_BUTTON_CUSTOM_ID)
     async def help_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
-            "Use slash commands in this thread to post anonymously:\n\n/anon-addreview — Add a review to this site\n/anon-question — Ask a question\n/anon-reply — Reply to a specific message\n\nMake sure to select the correct thread/message from the autocomplete menu.",
+            "Use slash commands in this thread to post anonymously:\n\n"
+            "/anon-addreview — Add a review to this site\n"
+            "/anon-question — Ask a question\n"
+            "/anon-reply — Reply to a specific message\n\n"
+            "Make sure to select the correct thread/message from the autocomplete menu.",
             ephemeral=True
         )
+
+async def post_help_button(thread: discord.Thread, client: discord.Client):
+    async for msg in thread.history(limit=50):
+        if msg.author == client.user and msg.components:
+            if msg.components[0].children[0].custom_id == HELP_BUTTON_CUSTOM_ID:
+                await msg.delete()
+    await thread.send(
+        "Use the slash commands below to anonymously add reviews, questions, or replies in this thread.",
+        view=HelpButtonView()
+    )
 
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
@@ -90,6 +156,7 @@ class CommandsCog(commands.Cog):
             log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
             await log_channel.send(f"[ANON REPLY]\nAuthor: ||{interaction.user}||\nContent: ↩️ - {message}\nLink: {sent.jump_url}")
             await interaction.response.send_message("Reply posted anonymously.", ephemeral=True)
+            await post_help_button(thread, interaction.client)
         except Exception as e:
             await interaction.response.send_message(f"Something went wrong: {e}", ephemeral=True)
 
@@ -104,6 +171,7 @@ class CommandsCog(commands.Cog):
             log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
             await log_channel.send(f"[ANON ADD REVIEW]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: {sent.jump_url}")
             await interaction.response.send_message("Review added anonymously.", ephemeral=True)
+            await post_help_button(thread, interaction.client)
         except Exception as e:
             await interaction.response.send_message(f"Something went wrong: {e}", ephemeral=True)
 
@@ -117,12 +185,12 @@ class CommandsCog(commands.Cog):
             log_channel = interaction.client.get_channel(LOG_CHANNEL_ID)
             await log_channel.send(f"[ANON QUESTION]\nAuthor: ||{interaction.user}||\nContent: ❓ - {message}\nLink: {sent.jump_url}")
             await interaction.response.send_message("Question posted anonymously.", ephemeral=True)
+            await post_help_button(thread, interaction.client)
         except Exception as e:
             await interaction.response.send_message(f"Something went wrong: {e}", ephemeral=True)
 
     @app_commands.command(name="anon-newsite", description="Create a new site thread with initial review")
     async def anon_newsite(self, interaction: discord.Interaction):
-        from commands import SubmitModal
         await interaction.response.send_modal(SubmitModal("anon-newsite"))
 
 async def setup(bot):
