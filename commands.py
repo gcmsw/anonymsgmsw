@@ -3,9 +3,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, View
-from dotenv import load_dotenv
-
-load_dotenv()
 
 FIELD_FORUM_CHANNEL_ID = int(os.getenv("FIELD_FORUM_CHANNEL_ID"))
 HELP_BUTTON_LABEL = "How to Post Anonymously"
