@@ -1,3 +1,6 @@
+# ✅ Latest stable version with all current functionality
+# Updated with final change: embed message for review button in submit channel
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -38,19 +41,17 @@ async def message_autocomplete(interaction: discord.Interaction, current: str):
     except Exception:
         return []
 
-# Helper for error responses
+# Error helper
 async def send_error(interaction: discord.Interaction, message: str):
-    embed = discord.Embed(description=f"🚨 {message}", color=discord.Color.red())
+    embed = discord.Embed(description=f"⚠️ {message}", color=discord.Color.red())
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Modal for new site submission
 class SubmitModal(discord.ui.Modal):
     def __init__(self, command_type: str, prefill_data: dict = None):
         self.command_type = command_type
         self.prefill_data = prefill_data or {}
-        title_map = {
-            "anon-newsite": "Submit New Site Review",
-        }
-        super().__init__(title=title_map[command_type])
+        super().__init__(title="Submit New Site Review")
 
         self.add_item(discord.ui.TextInput(
             label="Site Name",
@@ -88,7 +89,6 @@ class SubmitModal(discord.ui.Modal):
 
             thread_with_msg = await forum_channel.create_thread(name=site_name, content=f"{stars} - {message}")
             thread = thread_with_msg.thread
-
             await log_channel.send(f"[ANON NEW THREAD]\nAuthor: ||{interaction.user}||\nContent: {stars} - {message}\nLink: https://discord.com/channels/{forum_channel.guild.id}/{thread.id}")
             await interaction.response.send_message("Posted new site review thread.", ephemeral=True)
             await post_help_button(thread, interaction.client)
@@ -98,6 +98,7 @@ class SubmitModal(discord.ui.Modal):
         except Exception as e:
             await send_error(interaction, f"Something went wrong: {e}")
 
+# Button and Help View
 class ReviewButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -125,6 +126,7 @@ class HelpButtonView(discord.ui.View):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# Help button logic
 async def post_help_button(thread: discord.Thread, client: discord.Client):
     async for msg in thread.history(limit=50):
         if msg.author == client.user and msg.components:
@@ -137,6 +139,7 @@ async def post_help_button(thread: discord.Thread, client: discord.Client):
     )
     await thread.send(embed=embed, view=HelpButtonView())
 
+# Commands
 class CommandsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -156,7 +159,12 @@ class CommandsCog(commands.Cog):
             if msg.author == interaction.client.user and msg.components:
                 await msg.delete()
 
-        await channel.send("Click a button below to submit anonymously:", view=ReviewButtons())
+        embed = discord.Embed(
+            title="Submit an Anonymous Review",
+            description="Use the button below to submit an anonymous review for a field internship site.",
+            color=discord.Color.green()
+        )
+        await channel.send(embed=embed, view=ReviewButtons())
         await interaction.response.send_message("Buttons posted!", ephemeral=True)
 
     @app_commands.command(name="anon-addreview", description="Add a review to an existing site")
