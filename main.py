@@ -2,37 +2,70 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
-from flask import Flask
-import threading
+from keep_alive import keep_alive
+from commands import post_help_button  # Import the function so we can use it in the event
+
+keep_alive()
 
 intents = discord.Intents.default()
-intents.messages = True
-intents.guilds = True
 intents.message_content = True
+intents.guilds = True
+intents.members = True
+intents.messages = True  # Needed to trigger on_message
+bot = commands.Bot(command_prefix="?", intents=intents)
 
-bot = commands.Bot(command_prefix="!", intents=intents)
-TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = os.getenv("GUILD_ID")
+initial_extensions = ["commands"]
 
-# Flask keep-alive
-app = Flask('')
+def is_staff():
+    async def predicate(interaction: discord.Interaction) -> bool:
+        try:
+            staff_role = discord.utils.get(interaction.guild.roles, name="Admin")
+            return staff_role in interaction.user.roles
+        except:
+            return False
+    return app_commands.check(predicate)
 
-@app.route('/')
-def home():
-    return "Bot is alive"
+@bot.tree.command(name="ping", description="Check latency")
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Pong! Latency: {round(bot.latency * 1000)}ms", ephemeral=True)
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
+@bot.tree.command(name="shutdown", description="Shuts down the bot")
+@is_staff()
+async def shutdown(interaction: discord.Interaction):
+    await interaction.response.send_message("Shutting down...", ephemeral=True)
+    await bot.close()
 
-def keep_alive():
-    t = threading.Thread(target=run)
-    t.start()
+@bot.event
+async def on_ready():
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your confessions 😭"))
 
-# Load extensions
-initial_extensions = ['commands']
+    for ext in initial_extensions:
+        try:
+            await bot.load_extension(ext)
+            print(f"✅ Loaded extension: {ext}")
+        except Exception as e:
+            print(f"❌ Failed to load extension {ext}: {e}")
 
-if __name__ == '__main__':
-    for extension in initial_extensions:
-        bot.load_extension(extension)
-    keep_alive()
-    bot.run(TOKEN)  # Starts the bot
+    from commands import ReviewButtons
+    bot.add_view(ReviewButtons())
+    print("✅ Registered persistent ReviewButtons view")
+
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"❌ Slash command sync failed: {e}")
+
+    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    if isinstance(message.channel, discord.Thread):
+        await post_help_button(message.channel, bot)
+
+    await bot.process_commands(message)
+
+bot.run(os.environ["DISCORD_TOKEN"])
