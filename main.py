@@ -37,7 +37,7 @@ async def shutdown(interaction: discord.Interaction):
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your confessions 😭"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your reviews"))
 
     for ext in initial_extensions:
         try:
