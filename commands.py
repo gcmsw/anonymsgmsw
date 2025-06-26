@@ -30,21 +30,21 @@ async def message_autocomplete(interaction: discord.Interaction, current: str):
         thread_id = getattr(interaction.namespace, "thread_id", None)
         if not thread_id or not thread_id.isdigit():
             return []
-        
+
         thread = interaction.client.get_channel(int(thread_id))
         if not isinstance(thread, discord.Thread):
             return []
 
-        messages = []
-        async for msg in thread.history(limit=100):
-            if msg.content:  # skip empty bot/system messages
-                messages.append(msg)
+        messages = [msg async for msg in thread.history(limit=100) if msg.content]
 
-        choices = [
-            app_commands.Choice(name=msg.content[:50], value=str(msg.id))
-            for msg in messages if current.lower() in msg.content.lower()
-        ]
-        return choices[:25]
+        return [
+            app_commands.Choice(
+                name=(msg.content[:97] + '...') if len(msg.content) > 100 else msg.content,
+                value=str(msg.id)
+            )
+            for msg in messages
+            if current.lower() in msg.content.lower()
+        ][:25]
 
     except Exception as e:
         print(f"[Autocomplete ERROR] message_autocomplete failed: {e}")
