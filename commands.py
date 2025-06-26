@@ -65,7 +65,7 @@ class SubmitModal(discord.ui.Modal):
         ))
         self.add_item(discord.ui.TextInput(
             label="Message",
-            placeholder="What do you want to say?",
+            placeholder="What would you like to share?",
             style=discord.TextStyle.paragraph
         ))
 
@@ -76,7 +76,7 @@ class SubmitModal(discord.ui.Modal):
             site_name, rating, message = [comp.value for comp in self.children]
             rating_int = int(rating)
             if rating_int < 1 or rating_int > 5:
-                raise ValueError("Rating must be between 1 and 5.")
+                raise ValueError("Rating must be between 1 and 5")
             stars = "⭐" * rating_int
 
             for thread in forum_channel.threads:
@@ -117,9 +117,9 @@ class HelpButtonView(discord.ui.View):
             title="How to Post Anonymously",
             description=(
                 "Use slash commands in this thread to post anonymously:\n\n"
-                "`/anon-addreview` — Add a review to this site\n"
-                "`/anon-question` — Ask a question\n"
-                "`/anon-reply` — Reply to a specific message\n\n"
+                "`/anon-addreview` — Add a review to this specific site\n"
+                "`/anon-question` — Ask a question to this post\n"
+                "`/anon-reply` — Reply to a specific message in this post\n\n"
                 "Make sure to select the correct thread/message from the autocomplete menu."
             ),
             color=discord.Color.blurple()
