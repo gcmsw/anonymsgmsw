@@ -33,7 +33,7 @@ async def message_autocomplete(interaction: discord.Interaction, current: str):
         thread = interaction.client.get_channel(int(thread_id))
         if not thread:
             return []
-        messages = [msg async for msg in thread.history(limit=100) if not msg.author.bot]
+        messages = [msg async for msg in thread.history(limit=100)]
         return [
             app_commands.Choice(name=msg.content[:50], value=str(msg.id))
             for msg in messages if current.lower() in msg.content.lower()
