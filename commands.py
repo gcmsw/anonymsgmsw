@@ -11,34 +11,38 @@ LOG_CHANNEL_ID = 1387568553548447835
 FORUM_CHANNEL_ID = 1387662571271884840
 HELP_BUTTON_CUSTOM_ID = "thread_help_button"
 
-# Autocomplete functions
-async def thread_autocomplete(interaction: discord.Interaction, current: str):
-    try:
-        forum = interaction.client.get_channel(FORUM_CHANNEL_ID)
-        if not forum:
-            return []
-        return [
-            app_commands.Choice(name=thread.name, value=str(thread.id))
-            for thread in forum.threads
-            if current.lower() in thread.name.lower()
-        ][:25]
-    except Exception:
-        return []
-
 async def message_autocomplete(interaction: discord.Interaction, current: str):
-    thread_id = getattr(interaction.namespace, "thread_id", None)
-    if not thread_id or not thread_id.isdigit():
-        return []
     try:
+        # Look for the selected thread_id from the incoming form data
+        options = interaction.data.get("options", [])
+        thread_id = None
+
+        for opt in options:
+            if opt["name"] == "thread_id":
+                thread_id = opt.get("value")
+                break
+
+        if not thread_id or not thread_id.isdigit():
+            return []
+
         thread = interaction.client.get_channel(int(thread_id))
         if not thread:
             return []
-        messages = [msg async for msg in thread.history(limit=100) if not msg.author.bot]
+
+        # Only suggest messages not sent by bots (could be changed if needed)
+        messages = [
+            msg async for msg in thread.history(limit=100)
+            if not msg.author.bot
+        ]
+
+        # Return the top 25 matches with content preview
         return [
             app_commands.Choice(name=msg.content[:50], value=str(msg.id))
             for msg in messages if current.lower() in msg.content.lower()
         ][:25]
-    except Exception:
+
+    except Exception as e:
+        print(f"[Autocomplete Error - message_id]: {e}")
         return []
 
 # Error helper
